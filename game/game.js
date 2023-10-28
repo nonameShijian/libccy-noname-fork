@@ -98,7 +98,7 @@
 			return stack.filter(Boolean).join('/');
 		}
 		const require = function (id) {
-			//console.log(id);
+			console.log(id);
 			if (modules[id]) {
 				return modules[id];
 			}
@@ -129,8 +129,8 @@
 				if (id.endsWith('.js')) {
 					let fun;
 					try {
-						fun = (new Function(`module`, `exports`, `require`, `__fileName`, `__dirname`, `${data}`));
-						fun(_module, _module.exports, _id => require(id.split('/').slice(0, -1).join('/') + '/' + _id)), id.slice(id.lastIndexOf('/') + 1, !!winRequire ? window.__dirname : location.href.slice(0, location.href.lastIndexOf('/')));
+						fun = (new Function(`module`, `exports`, `require`, `__fileName`, `__dirname`, `"use strict";${data}`));
+						fun(_module, _module.exports, _id => require((_id.startsWith('./') || _id.startsWith('../')) ? (id.split('/').slice(0, -1).join('/') + '/' + _id) : _id)), id.slice(id.lastIndexOf('/') + 1, !!winRequire ? window.__dirname : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/')));
 						Object.assign(modules[id], _module.exports);
 						return modules[id];
 					} catch (e) {
@@ -207,11 +207,17 @@
 		return object;
 	};
 	setAllPropertiesEnumerable(lib.element.Player.prototype);
-	const cardPrototype=setAllPropertiesEnumerable(lib.element.Card.prototype),vCardPrototype=setAllPropertiesEnumerable(lib.element.VCard.prototype);
-	Object.keys(vCardPrototype).forEach(key=>{
-		// @ts-ignore
+	
+	// 这部分修改是因为electron v0.3.6(47内核)会报错，不明原因
+	Object.keys(lib.element.VCard.prototype).forEach(key => {
+		const lib = require('./game/modules/index.js').lib;
+		const cardPrototype = lib.element.Card.prototype, vCardPrototype = lib.element.VCard.prototype;
 		Object.defineProperty(cardPrototype,key,Object.getOwnPropertyDescriptor(vCardPrototype,key));
 	});
+	// const cardPrototype = setAllPropertiesEnumerable(lib.element.Card.prototype), vCardPrototype = setAllPropertiesEnumerable(lib.element.VCard.prototype);
+	// Object.keys(vCardPrototype).forEach(key => {
+	// 	Object.defineProperty(cardPrototype, key, Object.getOwnPropertyDescriptor(vCardPrototype, key));
+	// });
 	setAllPropertiesEnumerable(lib.element.Button.prototype);
 	setAllPropertiesEnumerable(lib.element.GameEvent.prototype);
 	setAllPropertiesEnumerable(lib.element.Dialog.prototype);
