@@ -214,9 +214,9 @@
 	setAllPropertiesEnumerable(lib.element.Player.prototype);
 	
 	// 这部分修改是因为electron v0.3.6(47内核)会报错，不明原因
-	Object.keys(lib.element.VCard.prototype).forEach(key => {
-		const lib = require('./game/modules/index.js').lib;
-		const cardPrototype = lib.element.Card.prototype, vCardPrototype = lib.element.VCard.prototype;
+	const cardPrototype = lib.element.Card.prototype, vCardPrototype = lib.element.VCard.prototype;
+	setAllPropertiesEnumerable(cardPrototype)
+	Object.keys(vCardPrototype).forEach(key => {
 		Object.defineProperty(cardPrototype,key,Object.getOwnPropertyDescriptor(vCardPrototype,key));
 	});
 	// const cardPrototype = setAllPropertiesEnumerable(lib.element.Card.prototype), vCardPrototype = setAllPropertiesEnumerable(lib.element.VCard.prototype);
