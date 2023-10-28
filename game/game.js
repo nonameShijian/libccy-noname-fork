@@ -8,6 +8,7 @@
 	 * @typedef {InstanceType<typeof lib.element.NodeWS>} NodeWS
 	 */
 	const userAgent=navigator.userAgent.toLowerCase();
+	const nonameInitialized = localStorage.getItem('noname_inited');
 	if(!localStorage.getItem('gplv3_noname_alerted')){
 		if(confirm('①无名杀是一款基于GPLv3协议的开源软件！\n你可以在遵守GPLv3协议的基础上任意使用，修改并转发《无名杀》，以及所有基于《无名杀》开发的拓展。\n点击“确定”即代表您认可并接受GPLv3协议↓️\nhttps://www.gnu.org/licenses/gpl-3.0.html\n②无名杀官方发布地址仅有GitHub仓库！\n其他所有的所谓“无名杀”社群（包括但不限于绝大多数“官方”QQ群、QQ频道等）均为玩家自发组织，与无名杀官方无关！')){
 			// @ts-ignore
@@ -116,7 +117,7 @@
 					throw new Error(`模块[${id}]加载失败`);
 				};
 				let data;
-				xhr.open("GET", location.href.slice(0, location.href.lastIndexOf('/') + 1) + id, false);
+				xhr.open("GET", (nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id, false);
 				xhr.send();
 				if (xhr.readyState === 4 && ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 0)) {
 					data = xhr.responseText;
@@ -129,14 +130,18 @@
 				if (id.endsWith('.js')) {
 					let fun;
 					try {
-						fun = (new Function(`module`, `exports`, `require`, `__fileName`, `__dirname`, `"use strict";${data}`));
-						fun(_module, _module.exports, _id => require((_id.startsWith('./') || _id.startsWith('../')) ? (id.split('/').slice(0, -1).join('/') + '/' + _id) : _id)), id.slice(id.lastIndexOf('/') + 1, !!winRequire ? window.__dirname : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/')));
+						fun = (new Function(`module`, `exports`, `require`, `__filename`, `__dirname`, `"use strict";${data}`));
+						fun(_module, _module.exports,
+							_id => require((_id.startsWith('./') || _id.startsWith('../')) ? (id.split('/').slice(0, -1).join('/') + '/' + _id) : _id),
+							id.slice(id.lastIndexOf('/') + 1),
+							!!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/'))
+						);
 						Object.assign(modules[id], _module.exports);
 						return modules[id];
 					} catch (e) {
 						delete modules[id];
 						if (e instanceof Error && e.stack) {
-							e.stack = e.stack.replace('\n    ', str => str + `at ${location.href.slice(0, location.href.lastIndexOf('/')+1) + id}` + str);
+							e.stack = e.stack.replace('\n    ', str => str + `at ${(nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id}` + str);
 						}
 						console.error(`模块[${id}]加载失败`);
 						console.error(fun);
