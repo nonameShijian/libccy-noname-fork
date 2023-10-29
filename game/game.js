@@ -119,6 +119,10 @@
 			if (modules[id]) {
 				return modules[id];
 			}
+			if (nonameInitialized && nonameInitialized != 'nodejs' && id.includes(nonameInitialized)) {
+				id = id.replace(nonameInitialized, '');
+			}
+			//console.log(id);
 			if (id.startsWith('./') || id.startsWith('../')) {
 				id = (id.startsWith('./') ? './' : '') + convertToAbsolutePath(id);
 				//console.log(id);
@@ -143,7 +147,7 @@
 					throw new Error(`模块[${id}]加载失败`);
 				}
 				const _module = new Module(id, data);
-				console.log(_module);
+				// console.log(_module);
 				if (id.endsWith('.js')) {
 					let fun;
 					try {
