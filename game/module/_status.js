@@ -1,5 +1,4 @@
-require('./_status.js');
-Object.assign(module.exports, {
+module.exports = {
 	paused: false,
 	paused2: false,
 	paused3: false,
@@ -33,5 +32,6 @@ Object.assign(module.exports, {
 	renku: [],
 	prehidden_skills: [],
 	postReconnect: {},
-});
+};
 
+const _status = module.exports;

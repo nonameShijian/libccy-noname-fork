@@ -1,15 +1,17 @@
-const game = require('./game.js'),
+/// <reference path="../../typings/index.d.ts" />
+
+const _status = require('./_status.js'),
+	gnc = require('./gnc.js'),
+	game = require('./game.js'),
 	ui = require('./ui.js'),
 	get = require('./get.js'),
-	ai = require('./ai.js'),
-	_status = require('./_status.js'),
-	gnc = require('./gnc.js');
+	ai = require('./ai.js');
 
 const nonameInitialized = localStorage.getItem('noname_inited');
 const userAgent = navigator.userAgent.toLowerCase();
 const GeneratorFunction = (function* () { }).constructor;
 
-const lib = Object.assign(module.exports, {
+module.exports = {
 	configprefix: 'noname_0.9_',
 	versionOL: 27,
 	updateURLS: {
@@ -9256,19 +9258,19 @@ const lib = Object.assign(module.exports, {
 					});
 					if (localStorage.getItem(`${lib.configprefix}playback`)) {
 						toLoad++;
-						lib.init.js(`${lib.assetURL}mode`, lib.config.mode, packLoaded, packLoaded);
+						lib.init.jsSync(`${lib.assetURL}mode`, lib.config.mode, packLoaded, packLoaded);
 					}
 					else if ((localStorage.getItem(`${lib.configprefix}directstart`) || !show_splash) && lib.config.all.mode.includes(lib.config.mode)) {
 						toLoad++;
-						lib.init.js(`${lib.assetURL}mode`, lib.config.mode, packLoaded, packLoaded);
+						lib.init.jsSync(`${lib.assetURL}mode`, lib.config.mode, packLoaded, packLoaded);
 					}
-					lib.init.js(`${lib.assetURL}card`, lib.config.all.cards, packLoaded, packLoaded);
-					lib.init.js(`${lib.assetURL}character`, lib.config.all.characters, packLoaded, packLoaded);
+					lib.init.jsSync(`${lib.assetURL}card`, lib.config.all.cards, packLoaded, packLoaded);
+					lib.init.jsSync(`${lib.assetURL}character`, lib.config.all.characters, packLoaded, packLoaded);
 					lib.init.js(`${lib.assetURL}character`, 'rank', packLoaded, packLoaded);
 					if (!_status.javaScriptExtensions) return;
 					const loadJavaScriptExtension = (javaScriptExtension, pathArray, fileArray, onLoadArray, onErrorArray, index) => {
 						if (!pathArray && !fileArray && !onLoadArray && !onErrorArray) {
-							lib.init.js(javaScriptExtension.path, javaScriptExtension.file, () => {
+							lib.init.jsSync(javaScriptExtension.path, javaScriptExtension.file, () => {
 								if (typeof javaScriptExtension.onload == 'function') javaScriptExtension.onload();
 								packLoaded();
 							}, () => {
@@ -9295,7 +9297,7 @@ const lib = Object.assign(module.exports, {
 							loadJavaScriptExtension(javaScriptExtension, pathArray, fileArray, onLoadArray, onErrorArray, index + 1);
 							packLoaded();
 						};
-						lib.init.js(path, file, javaScriptExtensionOnLoad, jsExtOnError);
+						lib.init.jsSync(path, file, javaScriptExtensionOnLoad, jsExtOnError);
 					};
 					_status.javaScriptExtensions.forEach(javaScriptExtension => {
 						const pathArray = isArray(javaScriptExtension.path);
@@ -9335,7 +9337,7 @@ const lib = Object.assign(module.exports, {
 				window.game = game;
 				lib.announce.init();
 				// node:path library alternative
-				if (typeof module != "object" || typeof module.exports != "object") lib.init.js(`${lib.assetURL}game`, "path", () => {
+				if (typeof process == "undefined" || typeof module != "object" || typeof module.exports != "object") lib.init.js(`${lib.assetURL}game`, "path", () => {
 					lib.path = window._noname_path;
 					delete window._noname_path;
 				}, e => {
@@ -9369,7 +9371,7 @@ const lib = Object.assign(module.exports, {
 									}
 									continue;
 								}
-								lib.init.js(lib.assetURL + 'extension/' + extensionlist[i], 'extension', extLoaded, (function (i) {
+								lib.init.jsSync(lib.assetURL + 'extension/' + extensionlist[i], 'extension', extLoaded, (function (i) {
 									return gnc.of(function* () {
 										game.removeExtension(i);
 										--extToLoad;
@@ -10926,35 +10928,30 @@ const lib = Object.assign(module.exports, {
 				return;
 			}
 			if (Array.isArray(file)) {
-				return file.forEach(value => lib.init.js(path, value, onLoad, onError));
+				return file.forEach(value => lib.init.jsSync(path, value, onLoad, onError));
 			}
 			let scriptSource;
 			if (!file) scriptSource = path;
 			else scriptSource = `${path}/${file}.js`;
-			if (path.startsWith('http')) scriptSource += `?rand=${get.id()}`;
-			const xmlHttpRequest = new XMLHttpRequest();
-			let data;
-			xmlHttpRequest.addEventListener("load", () => {
-				data = xmlHttpRequest.responseText;
-				if (!data) {
-					if (typeof onError == 'function') onError(new Error(`${scriptSource}加载失败！`));
-					return;
-				}
+			//因为lib.js是模块，所以需要将路径引导至根目录下
+			scriptSource = '../../' + scriptSource;
+			try {
+				require(scriptSource);
 				if (lib.config.fuck_sojson && scriptSource.includes('extension') != -1 && scriptSource.startsWith(lib.assetURL)) {
 					const pathToRead = scriptSource.slice(lib.assetURL.length);
-					if (data.includes('sojson') || data.includes('jsjiami') || data.includes('var _0x')) alert(`检测到您安装了使用免费版sojson进行加密的扩展。请谨慎使用这些扩展，避免游戏数据遭到破坏。\n扩展文件：${pathToRead}`);
+					const alertMessage = `检测到您安装了使用免费版sojson进行加密的扩展。请谨慎使用这些扩展，避免游戏数据遭到破坏。\n扩展文件：${pathToRead}`;
+					if (typeof game.readFileAsText == 'function') game.readFileAsText(pathToRead, result => {
+						if (result.includes('sojson') || result.includes('jsjiami') || result.includes('var _0x')) alert(alertMessage);
+					}, () => void 0);
+					else lib.init.reqSync(pathToRead, function () {
+						const result = this.responseText;
+						if (result.includes('sojson') || result.includes('jsjiami') || result.includes('var _0x')) alert(alertMessage);
+					}, () => void 0);
 				}
-				try {
-					window.eval(data);
-					if (typeof onLoad == 'function') onLoad();
-				}
-				catch (error) {
-					if (typeof onError == 'function') onError(error);
-				}
-			});
-			if (typeof onError == 'function') xmlHttpRequest.addEventListener("error", onError);
-			xmlHttpRequest.open("GET", scriptSource, false);
-			xmlHttpRequest.send();
+				if (typeof onLoad == 'function') onLoad();
+			} catch (error) {
+				if (typeof onError == 'function') onError(error);
+			}
 		},
 		req: (str, onload, onerror, master) => {
 			let sScriptURL;
@@ -35505,4 +35502,7 @@ const lib = Object.assign(module.exports, {
 	other: {
 		ignore: () => void 0
 	}
-});
+};
+
+//const lib = require('./lib.js');
+const lib = module.exports;

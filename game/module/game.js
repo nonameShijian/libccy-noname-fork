@@ -1,13 +1,16 @@
-const lib = require('./lib.js'),
+/// <reference path="../../typings/index.d.ts" />
+
+const gnc = require('./gnc.js'),
+	lib = require('./lib.js'),
 	ui = require('./ui.js'),
 	get = require('./get.js'),
 	ai = require('./ai.js'),
-	_status = require('./_status.js'),
-	gnc = require('./gnc.js');
+	_status = require('./_status.js');
 
 const GeneratorFunction = (function* () { }).constructor;
+const userAgent = navigator.userAgent.toLowerCase();
 
-const game = Object.assign(module.exports, {
+module.exports = {
 	//Stratagem
 	//谋攻
 	setStratagemBuffCost: (cardName, cost) => game.broadcastAll((clientCardName, clientCost) => lib.stratagemBuff.cost.set(clientCardName, clientCost), cardName, cost),
@@ -967,10 +970,7 @@ const game = Object.assign(module.exports, {
 		}
 	},
 	/**
-	 * @type {{
-	 * <T extends keyof typeof lib.message.client>(func: T, ...args: Parameters<typeof lib.message.client[T]>) => void;
-	 * <T extends any[]>(func: (...args: T) => void, ...args: T) => void;
-	 * }}
+	 * @type { Game['broadcast'] }
 	 */
 	broadcast: function () {
 		if (!lib.node || !lib.node.clients || game.online) return;
@@ -981,10 +981,7 @@ const game = Object.assign(module.exports, {
 		}
 	},
 	/**
-	 * @type {{
-	 * <T extends keyof typeof lib.message.client>(func: T, ...args: Parameters<typeof lib.message.client[T]>) => void;
-	 * <T extends any[]>(func: (...args: T) => void, ...args: T) => void;
-	 * }}
+	 * @type { Game['broadcastAll'] }
 	 */
 	broadcastAll: function () {
 		if (game.online) return;
@@ -1510,6 +1507,13 @@ const game = Object.assign(module.exports, {
 		else if (music.startsWith('ext:')) ui.backgroundMusic.src = `${lib.assetURL}extension/${music.slice(4)}`;
 		else ui.backgroundMusic.src = `${lib.assetURL}audio/background/${music}.mp3`;
 	},
+	/**
+	 * 
+	 * @param {string} type 
+	 * @param { (lib: import('./lib.js'), game: import('./game.js'), ui: import('./ui.js'), get: import('./get.js'), ai: import('./ai.js'), _status: import('./_status.js')) => object } content 
+	 * @param {*} [url] 
+	 * @returns 
+	 */
 	import: function (type, content, url) {
 		if (type == 'extension') {
 			const promise = game.loadExtension(content);
@@ -7749,4 +7753,6 @@ const game = Object.assign(module.exports, {
 	phaseNumber: 0,
 	roundNumber: 0,
 	shuffleNumber: 0,
-});
+};
+
+const game = module.exports;

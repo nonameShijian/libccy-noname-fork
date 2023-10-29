@@ -50,9 +50,24 @@
 		return filename.split('/').pop().split('.').pop().toLowerCase();
 	}
 
+	const modules/*=window.modules*/ = {};
 	function Module(id, data) {
 		this.id = id;
-		this.exports = {};
+		let exports = modules[id] = Object.create(null);
+		// 类型提示
+		this.exports = null;
+		Object.defineProperty(this, 'exports', {
+			enumerable: true,
+			configurable: true,
+			get() { return exports },
+			set(newExports) {
+				//modules[id] = newExports;
+				for (const key in modules[id]) {
+					delete modules[id][key];
+				}
+				Object.assign(modules[id], newExports);
+			}
+		});
 		this.data = data;
 	}
 
@@ -69,7 +84,7 @@
 	// @ts-ignore
 	const require = (function () {
 		const winRequire = window.require;
-		const modules/*=window.modules*/ = {};
+
 		/**
 		 * @param {string} path
 		 */
@@ -98,13 +113,15 @@
 			// 拼接栈中的路径为绝对路径
 			return stack.filter(Boolean).join('/');
 		}
+
 		const require = function (id) {
-			console.log(id);
+			//console.log(id);
 			if (modules[id]) {
 				return modules[id];
 			}
 			if (id.startsWith('./') || id.startsWith('../')) {
 				id = (id.startsWith('./') ? './' : '') + convertToAbsolutePath(id);
+				//console.log(id);
 			} else if (winRequire && !id.startsWith('./') && !id.startsWith('../')) {
 				modules[id] = winRequire(id);
 			}
@@ -117,7 +134,7 @@
 					throw new Error(`模块[${id}]加载失败`);
 				};
 				let data;
-				xhr.open("GET", (nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id, false);
+				xhr.open("GET", (nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id + (location.protocol.startsWith('http') ? `?date=${(new Date()).getTime()}` :''), false);
 				xhr.send();
 				if (xhr.readyState === 4 && ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 0)) {
 					data = xhr.responseText;
@@ -126,7 +143,7 @@
 					throw new Error(`模块[${id}]加载失败`);
 				}
 				const _module = new Module(id, data);
-				modules[id] = _module.exports;
+				console.log(_module);
 				if (id.endsWith('.js')) {
 					let fun;
 					try {
@@ -136,7 +153,6 @@
 							id.slice(id.lastIndexOf('/') + 1),
 							!!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/'))
 						);
-						Object.assign(modules[id], _module.exports);
 						return modules[id];
 					} catch (e) {
 						delete modules[id];
@@ -160,22 +176,19 @@
 			}
 		};
 		require.main = winRequire ? winRequire.main : undefined;
-		require.cache = winRequire ? winRequire.cache : Object.create(null);
+		require.cache = winRequire ? winRequire.cache : modules;
 		require.extensions = Object.assign(Object.create(null), {
 			// 其实用不到js这个
 			// 但是导入别的后缀名是可以默认按照这个来
 			'.js': module => {
 				module.exports = module.data;
-				Object.assign(modules[module.id], module.exports);
 			},
 			'.json': module => {
 				module.exports = JSON.parse(module.data);
-				Object.assign(modules[module.id], module.exports);
 			},
 			'.node': module => {
 				if (winRequire) {
 					module.exports = winRequire(module.id);
-					Object.assign(modules[module.id], module.exports);
 				} else throw '还未支持解析.node文件';
 			},
 		});
@@ -185,9 +198,12 @@
 	window.require = require;
 
 	/**
-	 * @type { import('./modules/index.js') }
+	 * 虽然index.js是相对于本js应该是‘./module/index.js’的
+	 * 
+	 * 但是非模块形式下的调用，路径是相对于游戏根目录的
+	 * @type { import('./module/index.js') }
 	 */
-	const nonameModule = require('./game/modules/index.js');
+	const nonameModule = require('./game/module/index.js');
 
 	const lib = nonameModule.lib,
 		game = nonameModule.game,

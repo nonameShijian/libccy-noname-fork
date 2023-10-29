@@ -7,7 +7,7 @@ const game = require('./game.js'),
 
 const GeneratorFunction = (function* () { }).constructor;
 
-const get = Object.assign(module.exports, {
+module.exports = {
 	/**
 	 * @param {number} numberOfPlayers
 	 * @returns {string[]}
@@ -4543,4 +4543,6 @@ const get = Object.assign(module.exports, {
 		}
 	},
 	attitude2: to => get.attitude(_status.event.player, to)
-});
+};
+
+const get = module.exports;

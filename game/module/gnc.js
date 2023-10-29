@@ -1,6 +1,6 @@
-require('./gnc.js');
-const GeneratorFunction = (function* () { }).constructor;
-const gnc = Object.assign(module.exports, {
+const GeneratorFunction = (function* () {}).constructor;
+
+module.exports = {
 	of: fn => gnc.is.generatorFunc(fn) ? function genCoroutine() {
 		let gen = fn.apply(this, arguments);
 		gen.status = "next";
@@ -37,4 +37,7 @@ const gnc = Object.assign(module.exports, {
 		generatorFunc: item => item instanceof GeneratorFunction,
 		generator: item => (typeof item == "object") && ("constructor" in item) && item.constructor && ("constructor" in item.constructor) && item.constructor.constructor === GeneratorFunction
 	}
-});
+};
+
+// const gnc = require('./gnc.js');
+const gnc = module.exports;

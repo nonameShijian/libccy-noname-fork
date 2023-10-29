@@ -6,7 +6,7 @@ const game = require('./game.js'),
 	gnc = require('./gnc.js');
 const GeneratorFunction = (function* () { }).constructor;
 
-const ui = Object.assign(module.exports, {
+module.exports = {
 	updates: [],
 	thrown: [],
 	touchlines: [],
@@ -14636,4 +14636,6 @@ const ui = Object.assign(module.exports, {
 	updateRoundNumber: (roundNumber, cardPileNumber) => {
 		if (ui.cardPileNumber) ui.cardPileNumber.innerHTML = `${roundNumber}轮 剩余牌: ${cardPileNumber}`;
 	},
-});
+};
+
+const ui = module.exports;

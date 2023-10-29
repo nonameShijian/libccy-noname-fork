@@ -1,10 +1,9 @@
-const game = require('./game.js'),
+const _status = require('./_status.js'),
+	game = require('./game.js'),
 	ui = require('./ui.js'),
-	//lib = require('./lib.js'),
-	get = require('./get.js'),
-	_status = require('./_status.js');
+	get = require('./get.js');
 
-Object.assign(module.exports, {
+module.exports = {
 	basic: {
 		chooseButton: function (check) {
 			var event = _status.event;
@@ -184,4 +183,6 @@ Object.assign(module.exports, {
 		}
 	},
 	get: get
-});
+};
+
+const ai = module.exports;
