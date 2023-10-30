@@ -1,3 +1,4 @@
+/// <reference path="../../typings/index.d.ts" />
 exports._status = require('./_status.js');
 exports.gnc = require('./gnc.js');
 exports.lib = require('./lib.js');

@@ -1,4 +1,5 @@
-const GeneratorFunction = (function* () {}).constructor;
+/// <reference path="../../typings/index.d.ts" />
+const GeneratorFunction = (function* () { }).constructor;
 
 module.exports = {
 	of: fn => gnc.is.generatorFunc(fn) ? function genCoroutine() {

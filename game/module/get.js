@@ -1,11 +1,8 @@
+/// <reference path="../../typings/index.d.ts" />
 const game = require('./game.js'),
 	ui = require('./ui.js'),
 	lib = require('./lib.js'),
-	ai = require('./ai.js'),
-	_status = require('./_status.js'),
-	gnc = require('./gnc.js');
-
-const GeneratorFunction = (function* () { }).constructor;
+	_status = require('./_status.js');
 
 module.exports = {
 	/**

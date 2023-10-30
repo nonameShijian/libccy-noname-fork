@@ -1,6 +1,4 @@
 'use strict';
-//test
-const game = require('../../game/module/game.js');
 game.import('play',function(lib,game,ui,get,ai,_status){
 	return {
 		name:'boss',

@@ -1,3 +1,4 @@
+/// <reference path="../typings/index.d.ts" />
 "use strict";
 {
 	/**
@@ -7,41 +8,41 @@
 	 * @typedef {InstanceType<typeof lib.element.GameEvent>} GameEvent
 	 * @typedef {InstanceType<typeof lib.element.NodeWS>} NodeWS
 	 */
-	const userAgent=navigator.userAgent.toLowerCase();
+	const userAgent = navigator.userAgent.toLowerCase();
 	const nonameInitialized = localStorage.getItem('noname_inited');
-	if(!localStorage.getItem('gplv3_noname_alerted')){
-		if(confirm('①无名杀是一款基于GPLv3协议的开源软件！\n你可以在遵守GPLv3协议的基础上任意使用，修改并转发《无名杀》，以及所有基于《无名杀》开发的拓展。\n点击“确定”即代表您认可并接受GPLv3协议↓️\nhttps://www.gnu.org/licenses/gpl-3.0.html\n②无名杀官方发布地址仅有GitHub仓库！\n其他所有的所谓“无名杀”社群（包括但不限于绝大多数“官方”QQ群、QQ频道等）均为玩家自发组织，与无名杀官方无关！')){
+	if (!localStorage.getItem('gplv3_noname_alerted')) {
+		if (confirm('①无名杀是一款基于GPLv3协议的开源软件！\n你可以在遵守GPLv3协议的基础上任意使用，修改并转发《无名杀》，以及所有基于《无名杀》开发的拓展。\n点击“确定”即代表您认可并接受GPLv3协议↓️\nhttps://www.gnu.org/licenses/gpl-3.0.html\n②无名杀官方发布地址仅有GitHub仓库！\n其他所有的所谓“无名杀”社群（包括但不限于绝大多数“官方”QQ群、QQ频道等）均为玩家自发组织，与无名杀官方无关！')) {
 			// @ts-ignore
-			localStorage.setItem('gplv3_noname_alerted',true);
+			localStorage.setItem('gplv3_noname_alerted', true);
 		}
-		else{
-			const ios=userAgent.includes('iphone')||userAgent.includes('ipad')||userAgent.includes('macintosh');
+		else {
+			const ios = userAgent.includes('iphone') || userAgent.includes('ipad') || userAgent.includes('macintosh');
 			//electron
-			if(typeof window.process=='object'&&typeof window.require=='function'){
-				const versions=window.process.versions;
+			if (typeof window.process == 'object' && typeof window.require == 'function') {
+				const versions = window.process.versions;
 				// @ts-ignore
-				const electronVersion=parseFloat(versions.electron);
+				const electronVersion = parseFloat(versions.electron);
 				let remote;
-				if(electronVersion>=14){
+				if (electronVersion >= 14) {
 					remote = window.require('@electron/remote');
-				}else{
+				} else {
 					remote = window.require('electron').remote;
 				}
-				const thisWindow=remote.getCurrentWindow();
+				const thisWindow = remote.getCurrentWindow();
 				thisWindow.destroy();
 				window.process.exit();
 			}
 			//android-cordova环境
 			//ios-cordova环境或ios浏览器环境
 			//非ios的网页版
-			else if(!ios){
+			else if (!ios) {
 				window.close();
 			}
 		}
 	}
 
-	window['b'+'ann'+'e'+'dE'+'x'+'ten'+'s'+'i'+'o'+'ns']=['\u4fa0\u4e49','\u5168\u6559\u7a0b'];
-	
+	window['b' + 'ann' + 'e' + 'dE' + 'x' + 'ten' + 's' + 'i' + 'o' + 'ns'] = ['\u4fa0\u4e49', '\u5168\u6559\u7a0b'];
+
 	/**
 	 * @param {string} filename
 	 */
@@ -50,10 +51,17 @@
 		return filename.split('/').pop().split('.').pop().toLowerCase();
 	}
 
-	const modules/*=window.modules*/ = {};
-	function Module(id, data) {
+	/** @type { { [key: string]: NodeModule } } */
+	const modules = window.modules = {};
+
+	/**
+	 * @param {string} id
+	 */
+	function Module(id) {
 		this.id = id;
-		let exports = modules[id] = Object.create(null);
+		let exports = Object.create(null);
+		// @ts-ignore
+		modules[id] = this;
 		// 类型提示
 		this.exports = null;
 		Object.defineProperty(this, 'exports', {
@@ -62,13 +70,19 @@
 			get() { return exports },
 			set(newExports) {
 				//modules[id] = newExports;
-				for (const key in modules[id]) {
-					delete modules[id][key];
+				if (typeof newExports == 'object') {
+					for (const key in exports) {
+						delete exports[key];
+					}
+					Object.assign(exports, newExports);
+				} else {
+					// throw '暂时不支持导出非object对象类型数据';
+					exports = newExports;
 				}
-				Object.assign(modules[id], newExports);
 			}
 		});
-		this.data = data;
+
+		this.require = _id => require((_id.startsWith('./') || _id.startsWith('../')) ? (id.split('/').slice(0, -1).join('/') + '/' + _id) : _id);
 	}
 
 	// 根据绝对路径的后缀名，调用挂载在对象上相应的方法
@@ -79,6 +93,12 @@
 		// @ts-ignore
 		(require.extensions[ext] || require.extensions['.js'])(this);
 	};
+
+	// @ts-ignore
+	window.Module = Module;
+
+	/** @type { import('../typings/magic-string.cjs.d.ts')['default'] } */
+	var MagicString;
 
 	/** @type { NodeRequire } */
 	// @ts-ignore
@@ -117,7 +137,7 @@
 		const require = function (id) {
 			//console.log(id);
 			if (modules[id]) {
-				return modules[id];
+				return modules[id].exports;
 			}
 			if (nonameInitialized && nonameInitialized != 'nodejs' && id.includes(nonameInitialized)) {
 				id = id.replace(nonameInitialized, '');
@@ -127,10 +147,14 @@
 				id = (id.startsWith('./') ? './' : '') + convertToAbsolutePath(id);
 				//console.log(id);
 			} else if (winRequire && !id.startsWith('./') && !id.startsWith('../')) {
-				modules[id] = winRequire(id);
+				let exports = winRequire(id);
+				if (exports) {
+					const _module = new Module(id);
+					_module.exports = exports;
+				}
 			}
 			if (modules[id]) {
-				return modules[id];
+				return modules[id].exports;
 			} else {
 				const xhr = new XMLHttpRequest();
 				xhr.onerror = () => {
@@ -138,7 +162,7 @@
 					throw new Error(`模块[${id}]加载失败`);
 				};
 				let data;
-				xhr.open("GET", (nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id + (location.protocol.startsWith('http') ? `?date=${(new Date()).getTime()}` :''), false);
+				xhr.open("GET", (nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id + (location.protocol.startsWith('http') ? `?date=${(new Date()).getTime()}` : ''), false);
 				xhr.send();
 				if (xhr.readyState === 4 && ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 0)) {
 					data = xhr.responseText;
@@ -146,31 +170,86 @@
 					console.error(`模块[${id}]加载失败`);
 					throw new Error(`模块[${id}]加载失败`);
 				}
-				const _module = new Module(id, data);
-				// console.log(_module);
+				const _module = new Module(id);
 				if (id.endsWith('.js')) {
-					let fun;
+					// let fun;
+					// const functionHeader = 'function anonymous(module,exports,require,__filename,__dirname\n) {\n"use strict";';
+					// const FunctionTail = '\n}';
+					// try {
+					// 	let mapUrl = '';
+
+					// 	if (MagicString) {
+					// 		const source = new MagicString(data);
+					// 		source.prepend(functionHeader).append(FunctionTail);
+					// 		// generates a v3 sourcemap
+					// 		const map = source.generateMap({
+					// 			hires: true,
+					// 			source: id,
+					// 			file: id + '.map',
+					// 			includeContent: true
+					// 		});
+					// 		// console.log(map);
+					// 		mapUrl = '\n//# sourceMappingURL=' + map.toUrl();
+					// 	}
+
+					// 	// fun = (new Function(`module`, `exports`, `require`, `__filename`, `__dirname`, `"use strict";${data}`));
+					// 	const str = functionHeader + data + FunctionTail + ';anonymous' + mapUrl;
+					// 	// console.log(str);
+					// 	fun = eval(str);
+					// 	// console.log(fun);
+
+					// 	fun(_module, _module.exports,
+					// 		_id => require((_id.startsWith('./') || _id.startsWith('../')) ? (id.split('/').slice(0, -1).join('/') + '/' + _id) : _id),
+					// 		id.slice(id.lastIndexOf('/') + 1),
+					// 		!!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/'))
+					// 	);
+					// 	return modules[id].exports;
+					// } catch (e) {
+					// 	delete modules[id];
+					// 	if (e instanceof Error && e.stack) {
+					// 		e.stack = e.stack.replace('\n    ', str => str + `at ${(nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id}` + str);
+					// 	}
+					// 	console.error(`模块[${id}]加载失败`);
+					// 	console.error(fun);
+					// 	throw e;
+					// }
+					const functionHeader = `"use strict";\n{\nlet module = window.modules['${id}'];\nlet exports = module.exports;\nlet require = module.require;\nlet __filename = '${ id.slice(id.lastIndexOf('/') + 1) }';\nlet __dirname = '${ !!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/')) }';\n`;
+					const FunctionTail = `\n}`;
 					try {
-						fun = (new Function(`module`, `exports`, `require`, `__filename`, `__dirname`, `"use strict";${data}`));
-						fun(_module, _module.exports,
-							_id => require((_id.startsWith('./') || _id.startsWith('../')) ? (id.split('/').slice(0, -1).join('/') + '/' + _id) : _id),
-							id.slice(id.lastIndexOf('/') + 1),
-							!!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/'))
-						);
-						return modules[id];
-					} catch (e) {
+
+						let mapUrl = '';
+
+						if (MagicString) {
+							const source = new MagicString(data);
+							source.prepend(functionHeader).append(FunctionTail);
+							// generates a v3 sourcemap
+							const map = source.generateMap({
+								// hires: true,
+								source: id,
+								file: id + '.map',
+								includeContent: true
+							});
+							mapUrl = '\n//# sourceMappingURL=' + map.toUrl();
+						}
+						// 同步
+						let script = document.createElement('script');
+						let str = functionHeader + data + FunctionTail + mapUrl;
+						script.innerHTML = str;
+						document.head.appendChild(script);
+						script.setAttribute('src', id);
+						return modules[id].exports;
+					} catch (error) {
 						delete modules[id];
-						if (e instanceof Error && e.stack) {
-							e.stack = e.stack.replace('\n    ', str => str + `at ${(nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id}` + str);
+						if (error instanceof Error && error.stack) {
+							error.stack = error.stack.replace('\n    ', str => str + `at ${(nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id}` + str);
 						}
 						console.error(`模块[${id}]加载失败`);
-						console.error(fun);
-						throw e;
+						throw error;
 					}
 				} else {
 					try {
 						_module.load();
-						return modules[id];
+						return modules[id].exports;
 					} catch (e) {
 						delete modules[id];
 						console.error(`模块[${id}]加载失败`);
@@ -201,6 +280,8 @@
 
 	window.require = require;
 
+	MagicString = require('./game/module/magic-string.cjs.js');
+
 	/**
 	 * 虽然index.js是相对于本js应该是‘./module/index.js’的
 	 * 
@@ -220,24 +301,24 @@
 	 * @template T
 	 * @param {T} object
 	 */
-	const setAllPropertiesEnumerable=object=>{
-		Object.getOwnPropertyNames(object).forEach(propertyKey=>{
-			if(propertyKey=='constructor') return;
+	const setAllPropertiesEnumerable = object => {
+		Object.getOwnPropertyNames(object).forEach(propertyKey => {
+			if (propertyKey == 'constructor') return;
 			const propertyDescriptor = Object.getOwnPropertyDescriptor(object, propertyKey);
 			if (propertyDescriptor) {
 				if (!propertyDescriptor.enumerable) propertyDescriptor.enumerable = true;
 				Object.defineProperty(object, propertyKey, propertyDescriptor);
 			}
-		},{});
+		}, {});
 		return object;
 	};
 	setAllPropertiesEnumerable(lib.element.Player.prototype);
-	
+
 	// 这部分修改是因为electron v0.3.6(47内核)会报错，不明原因
 	const cardPrototype = lib.element.Card.prototype, vCardPrototype = lib.element.VCard.prototype;
 	setAllPropertiesEnumerable(cardPrototype)
 	Object.keys(vCardPrototype).forEach(key => {
-		Object.defineProperty(cardPrototype,key,Object.getOwnPropertyDescriptor(vCardPrototype,key));
+		Object.defineProperty(cardPrototype, key, Object.getOwnPropertyDescriptor(vCardPrototype, key));
 	});
 	// const cardPrototype = setAllPropertiesEnumerable(lib.element.Card.prototype), vCardPrototype = setAllPropertiesEnumerable(lib.element.VCard.prototype);
 	// Object.keys(vCardPrototype).forEach(key => {
@@ -249,11 +330,11 @@
 	setAllPropertiesEnumerable(lib.element.Control.prototype);
 	setAllPropertiesEnumerable(lib.element.Client.prototype);
 	setAllPropertiesEnumerable(lib.element.NodeWS.prototype);
-	if('__core-js_shared__' in window) lib.init.init();
-	else{
-		const coreJSBundle=document.createElement('script');
-		coreJSBundle.onerror=coreJSBundle.onload=lib.init.init;
-		coreJSBundle.src=`${lib.assetURL}game/core-js-bundle.js`;
+	if ('__core-js_shared__' in window) lib.init.init();
+	else {
+		const coreJSBundle = document.createElement('script');
+		coreJSBundle.onerror = coreJSBundle.onload = lib.init.init;
+		coreJSBundle.src = `${lib.assetURL}game/core-js-bundle.js`;
 		document.head.appendChild(coreJSBundle);
 	}
 }

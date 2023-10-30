@@ -1,5 +1,4 @@
 /// <reference path="../../typings/index.d.ts" />
-
 const gnc = require('./gnc.js'),
 	lib = require('./lib.js'),
 	ui = require('./ui.js'),

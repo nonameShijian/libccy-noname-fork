@@ -1,5 +1,4 @@
 /// <reference path="../../typings/index.d.ts" />
-
 const _status = require('./_status.js'),
 	gnc = require('./gnc.js'),
 	game = require('./game.js'),
@@ -9,9 +8,14 @@ const _status = require('./_status.js'),
 
 const nonameInitialized = localStorage.getItem('noname_inited');
 const userAgent = navigator.userAgent.toLowerCase();
+/**
+ * @generator
+ * @yields {any}
+ */
 const GeneratorFunction = (function* () { }).constructor;
 
 module.exports = {
+	err: e => { throw e },
 	configprefix: 'noname_0.9_',
 	versionOL: 27,
 	updateURLS: {
@@ -8381,29 +8385,36 @@ module.exports = {
 			HTMLDivElement.prototype.setBackgroundImage = function (img) {
 				this.style.backgroundImage = `url("${lib.assetURL}${img}")`;
 				return this;
-			},
-				HTMLDivElement.prototype.listen = function (func) {
-					if (lib.config.touchscreen) {
-						this.addEventListener('touchend', function (e) {
-							if (!_status.dragged) {
-								func.call(this, e);
-							}
-						});
-						var fallback = function (e) {
-							if (!_status.touchconfirmed) {
-								func.call(this, e);
-							}
-							else {
-								this.removeEventListener('click', fallback);
-							}
+			};
+			/**
+			 * @listens module:hurler~touchend
+			 * @listens module:hurler~click
+			 */
+			HTMLDivElement.prototype.listen = function (func) {
+				if (lib.config.touchscreen) {
+					this.addEventListener('touchend', function (e) {
+						if (!_status.dragged) {
+							func.call(this, e);
 						}
-						this.addEventListener('click', fallback);
+					});
+					var fallback = function (e) {
+						if (!_status.touchconfirmed) {
+							func.call(this, e);
+						}
+						else {
+							this.removeEventListener('click', fallback);
+						}
 					}
-					else {
-						this.addEventListener('click', func);
-					}
-					return this;
-				};
+					this.addEventListener('click', fallback);
+				}
+				else {
+					this.addEventListener('click', func);
+				}
+				return this;
+			};
+			/**
+			 * @listens module:hurler~webkitTransitionEnd
+			 */
 			HTMLDivElement.prototype.listenTransition = function (func, time) {
 				let done = false;
 				const callback = () => {
@@ -9258,19 +9269,19 @@ module.exports = {
 					});
 					if (localStorage.getItem(`${lib.configprefix}playback`)) {
 						toLoad++;
-						lib.init.jsSync(`${lib.assetURL}mode`, lib.config.mode, packLoaded, packLoaded);
+						lib.init.js(`${lib.assetURL}mode`, lib.config.mode, packLoaded, packLoaded);
 					}
 					else if ((localStorage.getItem(`${lib.configprefix}directstart`) || !show_splash) && lib.config.all.mode.includes(lib.config.mode)) {
 						toLoad++;
-						lib.init.jsSync(`${lib.assetURL}mode`, lib.config.mode, packLoaded, packLoaded);
+						lib.init.js(`${lib.assetURL}mode`, lib.config.mode, packLoaded, packLoaded);
 					}
-					lib.init.jsSync(`${lib.assetURL}card`, lib.config.all.cards, packLoaded, packLoaded);
-					lib.init.jsSync(`${lib.assetURL}character`, lib.config.all.characters, packLoaded, packLoaded);
+					lib.init.js(`${lib.assetURL}card`, lib.config.all.cards, packLoaded, packLoaded);
+					lib.init.js(`${lib.assetURL}character`, lib.config.all.characters, packLoaded, packLoaded);
 					lib.init.js(`${lib.assetURL}character`, 'rank', packLoaded, packLoaded);
 					if (!_status.javaScriptExtensions) return;
 					const loadJavaScriptExtension = (javaScriptExtension, pathArray, fileArray, onLoadArray, onErrorArray, index) => {
 						if (!pathArray && !fileArray && !onLoadArray && !onErrorArray) {
-							lib.init.jsSync(javaScriptExtension.path, javaScriptExtension.file, () => {
+							lib.init.js(javaScriptExtension.path, javaScriptExtension.file, () => {
 								if (typeof javaScriptExtension.onload == 'function') javaScriptExtension.onload();
 								packLoaded();
 							}, () => {
@@ -9297,7 +9308,7 @@ module.exports = {
 							loadJavaScriptExtension(javaScriptExtension, pathArray, fileArray, onLoadArray, onErrorArray, index + 1);
 							packLoaded();
 						};
-						lib.init.jsSync(path, file, javaScriptExtensionOnLoad, jsExtOnError);
+						lib.init.js(path, file, javaScriptExtensionOnLoad, jsExtOnError);
 					};
 					_status.javaScriptExtensions.forEach(javaScriptExtension => {
 						const pathArray = isArray(javaScriptExtension.path);
@@ -9371,7 +9382,7 @@ module.exports = {
 									}
 									continue;
 								}
-								lib.init.jsSync(lib.assetURL + 'extension/' + extensionlist[i], 'extension', extLoaded, (function (i) {
+								lib.init.js(lib.assetURL + 'extension/' + extensionlist[i], 'extension', extLoaded, (function (i) {
 									return gnc.of(function* () {
 										game.removeExtension(i);
 										--extToLoad;
@@ -9683,7 +9694,7 @@ module.exports = {
 					}
 				}
 			}
-			else if (typeof window.require == 'function'&&window.process) {
+			else if (typeof window.require == 'function' && window.process) {
 				lib.node = {
 					fs: require('fs'),
 					path: require("path"),
