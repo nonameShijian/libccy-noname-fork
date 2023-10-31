@@ -4159,15 +4159,19 @@ module.exports = {
 					get init() {
 						return lib.configMenu.view.config.show_characternamepinyin.init;
 					},
+					set init(v) {},
 					get unfrequent() {
 						return lib.configMenu.view.config.show_characternamepinyin.unfrequent;
 					},
+					set unfrequent(v) {},
 					get item() {
 						return lib.configMenu.view.config.show_characternamepinyin.item;
 					},
+					set item(v) {},
 					get visualMenu() {
 						return lib.configMenu.view.config.show_characternamepinyin.visualMenu;
-					}
+					},
+					set visualMenu(v) {}
 				}
 			}
 		},
@@ -8862,7 +8866,23 @@ module.exports = {
 			};
 
 			window.onerror = function (msg, src, line, column, err) {
+				console.log(src);
 				const winPath = window.__dirname ? ('file:///' + (__dirname.replace(new RegExp('\\\\', 'g'), '/') + '/')) : '';
+				if (!src || src == location.href) {
+					if (err && err.stack) {
+						try {
+							//源码+行列
+							const sourceCode = err.stack.split('\n')[1].match(/\(\S+\)/)[0].slice(1,-1);
+							src = sourceCode.split(':').slice(0, -2).join(':');
+							let _src = src;
+							if (location.origin.startsWith('http')) _src = _src.replace(location.href, '');
+							if (('./' + _src) in window.modules) {
+								line = line - 1;
+							}
+							
+						} catch (error) {}
+					}
+				}
 				let str = `错误文件: ${typeof src == 'string' ? decodeURI(src).replace(lib.assetURL, '').replace(winPath, '') : '未知文件'}`;
 				str += `\n错误信息: ${msg}`;
 				const tip = lib.getErrorTip(msg);
@@ -8944,7 +8964,12 @@ module.exports = {
 						}
 					}
 				}
-				if (err && err.stack) str += '\n' + decodeURI(err.stack).replace(new RegExp(lib.assetURL, 'g'), '').replace(new RegExp(winPath, 'g'), '');
+				if (err && err.stack) {
+					str += '\n' + decodeURI(err.stack).replace(new RegExp(lib.assetURL, 'g'), '').replace(new RegExp(winPath, 'g'), '');
+					console.log(str);
+					console.log(err.stack);
+					console.trace("error");
+				}
 				alert(str);
 				window.ea = Array.from(arguments);
 				window.em = msg;

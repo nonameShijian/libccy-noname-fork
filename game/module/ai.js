@@ -59,7 +59,6 @@ module.exports = {
 		chooseCard: function (check) {
 			var event = _status.event;
 			if (event.filterCard == undefined) return (check() > 0);
-			window.aaa();
 			var i, j, range, cards, cards2, skills, check, effect;
 			var ok = false, forced = event.forced;
 			var iwhile = 100;
@@ -130,6 +129,7 @@ module.exports = {
 		chooseTarget: function (check) {
 			var event = _status.event;
 			if (event.filterTarget == undefined) return (check() > 0);
+			window.aaa();
 			var i, j, range, targets, targets2, effect;
 			var ok = false, forced = event.forced;
 			var iwhile = 100;

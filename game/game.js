@@ -43,6 +43,118 @@
 
 	window['b' + 'ann' + 'e' + 'dE' + 'x' + 'ten' + 's' + 'i' + 'o' + 'ns'] = ['\u4fa0\u4e49', '\u5168\u6559\u7a0b'];
 
+	Error.prepareStackTrace = function (error, callSites) {
+		//console.log(error);
+		//console.log(callSites);
+		//window.mycallSites = callSites;
+		//window.err = error;
+		const log = error.toString() + '\n' + callSites.map(callSite => {
+			let str = '    at ';
+			const TypeName = callSite.getTypeName();
+			const FunctionName = callSite.getFunctionName();
+			const MethodName = callSite.getMethodName();
+			//console.log(TypeName, FunctionName, MethodName);
+			let FileName = callSite.getFileName();
+			if (FunctionName) {
+				if (callSite.isConstructor && callSite.isConstructor()) str += 'new ';
+				// @ts-ignore
+				if (callSite.isAsync && callSite.isAsync()) str += 'async ';
+				if (TypeName) {
+					str += TypeName + '.';
+					if (!FileName) {
+						for (const moduleArr of Object.entries(modules)) {
+							const moduleName = moduleArr[0];
+							const module = moduleArr[1];
+							const moduleExports = moduleArr[1].exports;
+							try {
+								let _str = TypeName.split('.')[0];
+								eval(`const ${_str} = moduleExports; if(typeof ${TypeName + '.' + FunctionName} != 'function') throw 'err';`);
+								FileName = convertToAbsolutePath(location.href + module.id);
+							} catch (error) { }
+						}
+					}
+				}
+				str += FunctionName + ' ';
+			}
+			if (!FileName) FileName = '<anonymous>';
+
+			if (MethodName && MethodName != FunctionName) str += `[as ${MethodName}] `;
+
+			str += '(';
+
+			const isEval = callSite.isEval();
+			const EvalOrigin = callSite.getEvalOrigin();
+			const LineNumber = callSite.getLineNumber();
+			const ColumnNumber = callSite.getColumnNumber();
+			if (LineNumber && ColumnNumber) {
+				if (isEval && EvalOrigin) {
+					if (!EvalOrigin.startsWith('eval at require ')) {
+						str += EvalOrigin + ', '
+							+ FileName + ':'
+							+ LineNumber + ':'
+							+ ColumnNumber;
+					} else {
+						str += FileName + ':'
+							// 因为只在文件头尾各加了一行
+							+ (LineNumber - 1) + ':'
+							+ ColumnNumber;
+					}
+				} else {
+					// @ts-ignore
+					str += callSite.getScriptNameOrSourceURL() + ':'
+						+ LineNumber + ':'
+						+ ColumnNumber;
+				}
+			}
+
+			str += ')';
+
+			return str;
+		}).join('\n');
+		// console.log(log);
+		return log;
+	}
+
+	Error.stackTraceLimit = 100;
+
+	/**
+		 * 对带协议的路径进行兼容
+		 * @param {string} path
+		 */
+	function convertToAbsolutePath(path) {
+		// 使用正则表达式替换相对路径
+		path = path.replace(/\/\.\//g, '/');
+		path = path.replace(/\/([^/]+\/\.\.\/)/g, '/');
+
+		// 添加对带协议名的情况的处理
+		var protocol = '';
+		var index = path.indexOf('://');
+		if (index !== -1) {
+			protocol = path.substr(0, index + 3);
+			path = path.substr(index + 3);
+		}
+
+		// 使用循环和栈的方式处理相对路径
+		var parts = path.split('/');
+		var stack = [];
+
+		for (var i = 0; i < parts.length; i++) {
+			if (parts[i] === '.' || parts[i] === '') {
+				// 忽略当前路径和空路径
+				continue;
+			} else if (parts[i] === '..') {
+				// 弹出栈中的最后一个路径
+				stack.pop();
+			} else {
+				// 将路径推入栈中
+				stack.push(parts[i]);
+			}
+		}
+
+		// 拼接栈中的路径为绝对路径，加上协议名
+		return protocol + stack.filter(Boolean).join('/');
+	}
+
 	/**
 	 * @param {string} filename
 	 */
@@ -60,6 +172,12 @@
 	function Module(id) {
 		this.id = id;
 		let exports = Object.create(null);
+		if (Symbol.toStringTag) {
+			const fileName = id.split(/[/\\]/).pop();
+			// 一般情况下无同名文件的解决办法
+			// @ts-ignore
+			exports[Symbol.toStringTag] = fileName.slice(0, fileName.indexOf('.'));
+		}
 		// @ts-ignore
 		modules[id] = this;
 		// 类型提示
@@ -76,8 +194,24 @@
 					}
 					Object.assign(exports, newExports);
 				} else {
-					// throw '暂时不支持导出非object对象类型数据';
 					exports = newExports;
+				}
+				if (Symbol.toStringTag && exports[Symbol.toStringTag]) {
+					//console.time(exports[Symbol.toStringTag]);
+					function forEach(obj) {
+						for (const key in obj) {
+							if (Object.hasOwnProperty.call(obj, key)) {
+								try {
+									const descriptor = Object.getOwnPropertyDescriptor(obj[key], key);
+									if (descriptor && (descriptor.get || descriptor.set)) continue;
+									obj[key][Symbol.toStringTag] = `${obj[Symbol.toStringTag]}.${key}`;
+									forEach(obj[key]);
+								} catch (error) {}
+							}
+						}
+					}
+					forEach(exports);
+					//console.timeEnd(exports[Symbol.toStringTag]);
 				}
 			}
 		});
@@ -104,35 +238,6 @@
 	// @ts-ignore
 	const require = (function () {
 		const winRequire = window.require;
-
-		/**
-		 * @param {string} path
-		 */
-		function convertToAbsolutePath(path) {
-			// 使用正则表达式替换相对路径
-			path = path.replace(/\/\.\//g, '/');
-			path = path.replace(/\/([^/]+\/\.\.\/)/g, '/');
-
-			// 使用循环和栈的方式处理相对路径
-			var parts = path.split('/');
-			var stack = [];
-
-			for (var i = 0; i < parts.length; i++) {
-				if (parts[i] === '.' || parts[i] === '') {
-					// 忽略当前路径和空路径
-					continue;
-				} else if (parts[i] === '..') {
-					// 弹出栈中的最后一个路径
-					stack.pop();
-				} else {
-					// 将路径推入栈中
-					stack.push(parts[i]);
-				}
-			}
-
-			// 拼接栈中的路径为绝对路径
-			return stack.filter(Boolean).join('/');
-		}
 
 		const require = function (id) {
 			//console.log(id);
@@ -172,10 +277,50 @@
 				}
 				const _module = new Module(id);
 				if (id.endsWith('.js')) {
-					// let fun;
-					// const functionHeader = 'function anonymous(module,exports,require,__filename,__dirname\n) {\n"use strict";';
-					// const FunctionTail = '\n}';
+					let fun;
+					//const functionHeader = `"use strict";\n{\nlet module = window.modules['${id}'];\nlet exports = module.exports;\nlet require = module.require;\nlet __filename = '${id.slice(id.lastIndexOf('/') + 1)}';\nlet __dirname = '${!!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/'))}';\n`;
+					//const FunctionTail = `\n}`;
+					const functionHeader = `(function (exports, require, module, __filename, __dirname, process, global) {"use strict";\n`;
+					const FunctionTail = `\n})`;
+					try {
+						let mapUrl = '';
+
+						if (MagicString) {
+							const source = new MagicString(data);
+							source.prepend(functionHeader).append(FunctionTail);
+							const sourcePath = convertToAbsolutePath('noname://' + id);
+							console.log(sourcePath);
+							// generates a v3 sourcemap
+							const map = source.generateMap({
+								// hires: true,
+								source: sourcePath,
+								file: id.split(/[/\\]/).pop() + '.map',
+								includeContent: true
+							});
+							console.log(map);
+							console.log(JSON.parse(map.toString()));
+							mapUrl = '\n//# sourceMappingURL=' + map.toUrl();
+						}
+
+						const str = functionHeader + data + FunctionTail + mapUrl;
+						// console.log(str);
+						fun = eval(str);
+						fun(_module.exports, _module.require, _module, /* __filename */ `${id.split(/[/\\]/).pop()}`, /* __dirname */ `${!!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/'))}`, /* process */ window.process, /* global */ window);
+						return modules[id].exports;
+					} catch (e) {
+						delete modules[id];
+						if (e instanceof Error && e.stack) {
+							e.stack = e.stack.replace('\n    ', str => str + `at ${(nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id}` + str);
+						}
+						console.error(`模块[${id}]加载失败`);
+						//console.error(fun);
+						console.log(e.toString());
+						throw e;
+					}
+					// const functionHeader = `"use strict";\n{\nlet module = window.modules['${id}'];\nlet exports = module.exports;\nlet require = module.require;\nlet __filename = '${ id.slice(id.lastIndexOf('/') + 1) }';\nlet __dirname = '${ !!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/')) }';\n`;
+					// const FunctionTail = `\n}`;
 					// try {
+
 					// 	let mapUrl = '';
 
 					// 	if (MagicString) {
@@ -183,69 +328,28 @@
 					// 		source.prepend(functionHeader).append(FunctionTail);
 					// 		// generates a v3 sourcemap
 					// 		const map = source.generateMap({
-					// 			hires: true,
+					// 			// hires: true,
 					// 			source: id,
 					// 			file: id + '.map',
 					// 			includeContent: true
 					// 		});
-					// 		// console.log(map);
 					// 		mapUrl = '\n//# sourceMappingURL=' + map.toUrl();
 					// 	}
-
-					// 	// fun = (new Function(`module`, `exports`, `require`, `__filename`, `__dirname`, `"use strict";${data}`));
-					// 	const str = functionHeader + data + FunctionTail + ';anonymous' + mapUrl;
-					// 	// console.log(str);
-					// 	fun = eval(str);
-					// 	// console.log(fun);
-
-					// 	fun(_module, _module.exports,
-					// 		_id => require((_id.startsWith('./') || _id.startsWith('../')) ? (id.split('/').slice(0, -1).join('/') + '/' + _id) : _id),
-					// 		id.slice(id.lastIndexOf('/') + 1),
-					// 		!!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/'))
-					// 	);
+					// 	// 同步
+					// 	let script = document.createElement('script');
+					// 	let str = functionHeader + data + FunctionTail + mapUrl;
+					// 	script.innerHTML = str;
+					// 	document.head.appendChild(script);
+					// 	script.setAttribute('src', id);
 					// 	return modules[id].exports;
-					// } catch (e) {
+					// } catch (error) {
 					// 	delete modules[id];
-					// 	if (e instanceof Error && e.stack) {
-					// 		e.stack = e.stack.replace('\n    ', str => str + `at ${(nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id}` + str);
+					// 	if (error instanceof Error && error.stack) {
+					// 		error.stack = error.stack.replace('\n    ', str => str + `at ${(nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id}` + str);
 					// 	}
 					// 	console.error(`模块[${id}]加载失败`);
-					// 	console.error(fun);
-					// 	throw e;
+					// 	throw error;
 					// }
-					const functionHeader = `"use strict";\n{\nlet module = window.modules['${id}'];\nlet exports = module.exports;\nlet require = module.require;\nlet __filename = '${ id.slice(id.lastIndexOf('/') + 1) }';\nlet __dirname = '${ !!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/')) }';\n`;
-					const FunctionTail = `\n}`;
-					try {
-
-						let mapUrl = '';
-
-						if (MagicString) {
-							const source = new MagicString(data);
-							source.prepend(functionHeader).append(FunctionTail);
-							// generates a v3 sourcemap
-							const map = source.generateMap({
-								// hires: true,
-								source: id,
-								file: id + '.map',
-								includeContent: true
-							});
-							mapUrl = '\n//# sourceMappingURL=' + map.toUrl();
-						}
-						// 同步
-						let script = document.createElement('script');
-						let str = functionHeader + data + FunctionTail + mapUrl;
-						script.innerHTML = str;
-						document.head.appendChild(script);
-						script.setAttribute('src', id);
-						return modules[id].exports;
-					} catch (error) {
-						delete modules[id];
-						if (error instanceof Error && error.stack) {
-							error.stack = error.stack.replace('\n    ', str => str + `at ${(nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id}` + str);
-						}
-						console.error(`模块[${id}]加载失败`);
-						throw error;
-					}
 				} else {
 					try {
 						_module.load();

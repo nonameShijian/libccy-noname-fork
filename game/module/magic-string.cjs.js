@@ -551,6 +551,9 @@ class MagicString {
 			if (chunk.outro.length) mappings.advance(chunk.outro);
 		});
 
+		if (options.source) {
+			console.log(getRelativePath(options.file || '', options.source));
+		}
 		return {
 			file: options.file ? options.file.split(/[/\\]/).pop() : undefined,
 			sources: [
