@@ -8874,12 +8874,9 @@ module.exports = {
 							//源码+行列
 							const sourceCode = err.stack.split('\n')[1].match(/\(\S+\)/)[0].slice(1,-1);
 							src = sourceCode.split(':').slice(0, -2).join(':');
-							let _src = src;
-							if (location.origin.startsWith('http')) _src = _src.replace(location.href, '');
-							if (('./' + _src) in window.modules) {
+							if (('./' + src.replace(location.href, '').replace(lib.assetURL, '')) in window.modules) {
 								line = line - 1;
 							}
-							
 						} catch (error) {}
 					}
 				}

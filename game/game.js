@@ -69,7 +69,8 @@
 							try {
 								let _str = TypeName.split('.')[0];
 								eval(`const ${_str} = moduleExports; if(typeof ${TypeName + '.' + FunctionName} != 'function') throw 'err';`);
-								FileName = convertToAbsolutePath(location.href + module.id);
+								if (location.origin.startsWith('http')) FileName = convertToAbsolutePath(location.href + module.id);
+								else if (location.origin.startsWith('file')) FileName = (nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : '') + convertToAbsolutePath(module.id);
 							} catch (error) { }
 						}
 					}
