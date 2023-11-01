@@ -6,6 +6,11 @@ const game = require('./game.js'),
 
 module.exports = {
 	/**
+	 * 根据座次数n（从0开始）获取对应的“n+1号位”翻译
+	 * @param {number} seat
+	 */
+	seatTranslation: seat => `${get.cnNumber(seat + 1, true)}号位`,
+	/**
 	 * @param {number} numberOfPlayers
 	 * @returns {string[]}
 	 */
@@ -259,7 +264,10 @@ module.exports = {
 		 * 判断坐骑栏是否被合并
 		 */
 		mountCombined: function () {
-			if (typeof _status.mountCombined != 'boolean') {
+			if (lib.configOL) {
+				return lib.configOL.mount_combine;
+			}
+			else if (typeof _status.mountCombined != 'boolean') {
 				_status.mountCombined = lib.config.mount_combine;
 			}
 			return _status.mountCombined;
@@ -292,7 +300,8 @@ module.exports = {
 			if (every) return testingNaturesList.every((natures, index) => naturesList.slice(index + 1).every(testingNatures => testingNatures.length == natures.length && testingNatures.every(nature => natures.includes(nature))));
 			return testingNaturesList.every((natures, index) => {
 				const comparingNaturesList = naturesList.slice(index + 1);
-				return natures.some(nature => comparingNaturesList.every(testingNatures => testingNatures.includes(nature)));
+				if (natures.length) return natures.some(nature => comparingNaturesList.every(testingNatures => testingNatures.includes(nature)));
+				return comparingNaturesList.every(testingNatures => !testingNatures.length);
 			});
 		},
 		/**
@@ -323,7 +332,8 @@ module.exports = {
 			if (every) return testingNaturesList.every((natures, index) => naturesList.slice(index + 1).every(testingNatures => testingNatures.every(nature => !natures.includes(nature))));
 			return testingNaturesList.every((natures, index) => {
 				const comparingNaturesList = naturesList.slice(index + 1);
-				return natures.some(nature => comparingNaturesList.every(testingNatures => testingNatures.some(testingNature => testingNature != nature)));
+				if (natures.length) return natures.some(nature => comparingNaturesList.every(testingNatures => !testingNatures.length || testingNatures.some(testingNature => testingNature != nature)));
+				return comparingNaturesList.every(testingNatures => testingNatures.length);
 			});
 		},
 		//判断一张牌是否为明置手牌
@@ -1046,7 +1056,7 @@ module.exports = {
 		return list;
 	},
 	ip: () => {
-		if (!require) return '';
+		if (!(typeof window.require == 'function' && window.process)) return '';
 		var interfaces = require('os').networkInterfaces();
 		for (var devName in interfaces) {
 			var iface = interfaces[devName];

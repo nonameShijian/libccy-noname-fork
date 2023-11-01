@@ -71,12 +71,13 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				fullskin:true,
 				type:'basic',
 				enable:false,
-				global:'ying_destory',
+				destroy:'discardPile',
 				getYing:function(count){
 					var cards=[];
 					if(typeof count!='number') count=1;
 					while(count--){
-						cards.push(game.createCard('ying','spade',1));
+						let card=game.createCard('ying','spade',1);
+						cards.push(card);
 					}
 					return cards;
 				},
@@ -95,24 +96,6 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 		},
 		skill:{
 			//江山如故·转
-			//白牌
-			ying_destory:{
-				trigger:{
-					player:'loseAfter',
-					global:['loseAsyncAfter','cardsDiscardAfter','equipAfter'],
-				},
-				cardSkill:true,
-				forced:true,
-				popup:false,
-				filter:function(event,player){
-					return event.getd().some(i=>get.name(i,false)=='ying'&&get.position(i,true)=='d');
-				},
-				content:function(){
-					var cards=trigger.getd().filter(i=>get.name(i,false)=='ying'&&get.position(i,true)=='d');
-					game.cardsGotoSpecial(cards);
-					game.log(cards,'被移出了游戏');
-				},
-			},
 			//404郭嘉
 			jsrgqingzi:{
 				audio:2,
@@ -1850,7 +1833,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					var targets=game.filterPlayer(i=>i!=player);
 					for(var target of targets){
 						var att=get.attitude(target,player);
-						var result=yield target.chooseCard(`负山：是否交给${get.translation(player)}一张牌？`,`若如此做，其此阶段使用【杀】的次数上限+1`).set('att',att).set('ai',card=>{
+						var result=yield target.chooseCard('he',`负山：是否交给${get.translation(player)}一张牌？`,`若如此做，其此阶段使用【杀】的次数上限+1`).set('att',att).set('ai',card=>{
 							if(!get.event('goon')) return -get.value(card);
 							var isSha=get.name(card,get.event('target'))=='sha';
 							if(get.event('att')<0) return (isSha?0:5)-get.value(card);

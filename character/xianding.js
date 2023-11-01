@@ -381,11 +381,17 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 							'step 0'
 							var cards=trigger.getd().filter(card=>{
 								return get.position(card)=='d'&&player.getStorage('dcshangyu').includes(card);
-							});
+							}),targets=game.filterPlayer(current=>{
+								return !player.getStorage('dcshangyu_transfer').includes(current);
+							}).sortBySeat(_status.currentPhase);
 							event.cards=cards;
 							player.chooseTarget(`赏誉：将${get.translation(cards)}交给一名可选角色`,(card,player,target)=>{
 								return !player.getStorage('dcshangyu_transfer').includes(target);
-							},true);
+							},true).set('ai',target=>{
+								let att=get.sgn(get.attitude(_status.event.player,target)),idx=1+_status.event.targets.indexOf(target);
+								if(att<0) return -idx;
+								return att+1/idx;
+							}).set('targets',targets);
 							'step 1'
 							if(result.bool){
 								var target=result.targets[0];
@@ -447,17 +453,13 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					player.chooseControl(choices,'cancel2').set('prompt',get.prompt('dccaixia')).set('prompt2','你可以摸至多'+get.cnNumber(choices.length)+'张牌，但是你此后需要再使用等量的牌才可再发动本技能。').set('ai',()=>{
 						return _status.event.choice;
 					}).set('choice',function(){
-						if(player.isPhaseUsing()){
-							if(!player.hasCard(card=>{
-								return get.tag(card,'damage')&&player.hasValueTarget(card);
-							},'hs')) return 0;
-							var cards=player.getCards('hs',card=>{
-								return player.hasValueTarget(card);
-							});
-							if(!cards.some(card=>get.tag(card,'damage'))) return 0;
-							return Math.min(choices.length,cards.filter(card=>!get.tag(card,'damage')).length+1);
+						var cards=player.getCards('hs',card=>get.name(card,player)!=='sha'&&player.hasValueTarget(card));
+						var damage=Math.min(player.getCardUsable({name:'sha'}),player.countCards('hs','sha'))+cards.filter(i=>get.tag(i,'damage')).length;
+						if(player.isPhaseUsing()||player.hp+player.hujia+player.countCards('hs',i=>get.tag(card,'recover'))>2){
+							if(damage) return Math.min(choices.length-1,cards.length-damage);
+							return Math.min(choices.length-1,cards.length-1);
 						}
-						return choices.length;
+						return choices.length-1;
 					}());
 					'step 1'
 					if(result.control!='cancel2'){
@@ -471,7 +473,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				mod:{
 					aiOrder:function(player,card,num){
 						if(!get.tag(card,'damage')) return;
-						if(player.countMark('dccaixia_clear')>1) return num/2;
+						if(player.countMark('dccaixia_clear')>1) return num/3;
 						return num+6;
 					},
 				},
@@ -6255,7 +6257,6 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 						},
 						filterCard:()=>false,
 						selectCard:-1,
-						charlotte:true,
 						content:function(){
 							'step 0'
 							player.addTempSkill('dcfengyan_gain','phaseUseAfter');
@@ -6281,7 +6282,6 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 						},
 						filterCard:()=>false,
 						selectCard:-1,
-						charlotte:true,
 						content:function(){
 							player.addTempSkill('dcfengyan_sha','phaseUseAfter');
 							player.useCard({
@@ -11609,7 +11609,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					return 7-get.value(card);
 				},
 				content:function(){
-					player.addSkill('pyzhuren_destroy');
+					//player.addSkill('pyzhuren_destroy');
 					if(!_status.pyzhuren) _status.pyzhuren={};
 					var rand=0.85;
 					var num=get.number(cards[0]);
@@ -11627,7 +11627,9 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					}
 					else{
 						_status.pyzhuren[name]=true;
-						player.gain(game.createCard(name,cards[0].name=='shandian'?'spade':cards[0].suit,1),'gain2')
+						var card=game.createCard(name,cards[0].name=='shandian'?'spade':cards[0].suit,1);
+						card.destroyed='discardPile';
+						player.gain(card,'gain2')
 					}
 				},
 				ai:{
@@ -11635,32 +11637,6 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					result:{
 						player:1,
 					},
-				},
-			},
-			pyzhuren_destroy:{
-				trigger:{global:['loseEnd','cardsDiscardEnd']},
-				forced:true,
-				charlotte:true,
-				filter:function(event,player){
-					var cs=event.cards;
-					for(var i=0;i<cs.length;i++){
-						if(cs[i].name.indexOf('pyzhuren_')==0&&get.position(cs[i],true)=='d') return true;
-					}
-					return false;
-				},
-				forceDie:true,
-				content:function(){
-					if(!_status.pyzhuren) _status.pyzhuren={};
-					var list=[];
-					var cs=trigger.cards;
-					for(var i=0;i<cs.length;i++){
-						if(cs[i].name.indexOf('pyzhuren_')==0&&get.position(cs[i],true)=='d'){
-							_status.pyzhuren[cs[i].name]=false;
-							list.push(cs[i]);
-						}
-					}
-					game.log(list,'已被移出游戏');
-					game.cardsGotoSpecial(list);
 				},
 			},
 			pyzhuren_heart:{
@@ -11725,7 +11701,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					next.set('goon',get.attitude(player,trigger.player)<0&&!trigger.player.hasSkillTag('filterDamage',null,{
 						player:player,
 						card:trigger.card,
-					})&&get.damageEffect(trigger.player,player,player,trigger.nature)>0);
+					})&&get.damageEffect(trigger.player,player,player,get.natureList(trigger))>0);
 					next.logSkill=[event.name,trigger.player];
 					'step 1'
 					if(result.bool) trigger.num++;
@@ -12244,7 +12220,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			yuanji:'袁氏（生卒年不详），汝南郡汝阳县（今河南商水）人，袁术之女，孙权妃嫔。袁夫人出身世家大族汝南袁氏，其父袁术败亡后，入吴宫拜为夫人，以节操品行着称。',
 			chengbing:'程秉（生卒年不详），字德枢，汝南南顿（今河南项城西）人。三国时期吴国官员、儒学家。起初跟随郑玄，后来北方荒乱而到交州避难，期间与刘熙考究五经大义，因此通绕五经。后来交趾太守士燮任命程秉为长史。吴大帝孙权听闻程秉的名声，于是以礼征召他，程秉到后，被任命为太子太傅。黄武四年（225年），孙权为太子孙登娶周瑜之女为妃，程秉以太常身份于吴郡迎候，孙权亲身上程秉的船，可见孙权对他的极为礼待。程秉又教诲孙登对婚后相处要尊重儒家礼教。后来因病在任职期间逝世。著有《周易摘》、《尚书驳》、《论语弼》，凡三万余言。',
 			dc_zhouxuān:'周宣，生卒年不详，字孔和，乐安（治今山东高苑西北）人，擅长解梦，在郡做官时曾为太守解过梦，后又给曹丕解梦，都灵验。官至中郎，死于魏明帝末年。',
-			xuelingyun:'薛灵芸，东晋王嘉志怪小说《拾遗记》中的人物，魏文帝曹丕的宫人，妙于针工，虽处于深帷之内，不用灯烛之光，裁制立成。凡不是薛灵芸缝制的衣服，文帝一概不穿，宫中号为针神。薛灵芸的故事在正史中虽无记载，却由于许多野史笔记偶尔提及，如《拾遗记》、《太平广记》、《艳异编》等，渐于后世成为中国古代著名美女形象。,',
+			xuelingyun:'薛灵芸，东晋王嘉志怪小说《拾遗记》中的人物，魏文帝曹丕的宫人，妙于针工，虽处于深帷之内，不用灯烛之光，裁制立成。凡不是薛灵芸缝制的衣服，文帝一概不穿，宫中号为针神。薛灵芸的故事在正史中虽无记载，却由于许多野史笔记偶尔提及，如《拾遗记》、《太平广记》、《艳异编》等，渐于后世成为中国古代著名美女形象。',
 			yanghong:'杨弘，东汉末年袁术部将。袁术死后，杨弘等将其众欲归孙策，后庐江太守刘勋截击，转归于勋。',
 			xielingyu:'谢夫人，会稽山阴（今浙江省绍兴市）人，东汉尚书郎、徐令谢煚之女，吴大帝孙权的原配发妻，又称谢妃。深受孙权宠爱，爱幸有宠。后来孙权为了巩固江东政权，又纳徐氏，欲让谢夫人屈居其下。谢夫人不同意，失志早卒。谢夫人的弟弟是三国著名史学家、武陵太守谢承。豫章太守谢斐与谢夫人同宗同族。',
 			zerong:'笮融（？—195年），丹杨（治今安徽宣城）人，东汉末年豪强，生性残暴却笃信佛教，为佛教在中国的发展做出了很大贡献。东汉末年投奔徐州刺史陶谦，督管下邳、彭城、广陵三郡运粮。将其中大量物资占为己有累积财力，遂在徐州一带大规模崇佛，修建豪华佛寺，铸造金铜大佛，衣以锦彩，并举行浴佛节，招揽信徒万余人。其崇佛活动奠定了中国大型佛事活动的基础。后又投奔赵昱、薛礼、朱皓并将他们杀害，扬州牧刘繇因此兴兵讨伐笮融。笮融兵败后逃入深山，由于当地山民同样对他恨之入骨，便联手搜捕、杀死笮融，并将他的首级献给刘繇。',

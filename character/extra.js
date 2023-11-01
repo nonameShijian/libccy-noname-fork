@@ -145,7 +145,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					}).join('、')}`,
 				},
 				$createButton:function(item,type,position,noclick,node){
-					node=ui.create.identityCard(item,position,null,noclick);
+					node=ui.create.identityCard(item,position,noclick);
 					node.link=item;
 					return node;
 				},
@@ -167,16 +167,15 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 							'step 0'
 							var list=lib.config.mode_config.identity.identity.lastItem.slice();
 							list.removeArray(game.filterPlayer().map(i=>{
-								let identity=i.identity;
-								if(identity=='mingzhong') identity='zhong';
-								return identity;
+								var identity=i.identity;
+								return identity=='mingzhong'?'zhong':identity;
 							})).unique();
 							player.chooseButton([
 								'###炼魄：请选择一个身份###<div class="text center">你选择的身份对应的阵营角色数于本轮内视为+1</div>',
 								[list,function(item,type,position,noclick,node){
 									return lib.skill.jxlianpo.$createButton(item,type,position,noclick,node);
 								}],
-							])
+							],true);
 							'step 1'
 							var choice=result.links[0],mark=`jxlianpo_mark_${choice}`;
 							player.when({global:'roundStart'})
@@ -192,13 +191,13 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 									}
 								});
 							player.addMark(mark,1,false);
-							var videoId=lib.status.videoId++;
+							event.videoId=lib.status.videoId++;
 							var createDialog=function(player,identity,id){
 								var dialog=ui.create.dialog(`${get.translation(player)}展示了“${get.translation(identity+'2')}”的身份牌<br>`,'forcebutton');
 								dialog.videoId=id;
 								ui.create.spinningIdentityCard(identity,dialog);
 							};
-							game.broadcastAll(createDialog,player,choice,videoId);
+							game.broadcastAll(createDialog,player,choice,event.videoId);
 							var color='';
 							if(choice=='zhong') color='#y';
 							else if(choice=='fan') color='#g';
@@ -206,7 +205,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 							game.log(player,'展示了',`${color}${get.translation(choice+'2')}`,'的身份牌');
 							game.delay(3);
 							'step 2'
-							game.broadcastAll('closeDialog',videoId);
+							game.broadcastAll('closeDialog',event.videoId);
 						}
 					},
 					global:{

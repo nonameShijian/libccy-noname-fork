@@ -67,6 +67,7 @@ module.exports = {
 		for (let i = 0; i < ui.discardPile.childNodes.length; i++) {
 			var currentcard = ui.discardPile.childNodes[i];
 			currentcard.vanishtag.length = 0;
+			currentcard.clearKnowers();
 			if (get.info(currentcard).vanish || currentcard.storage.vanish) {
 				currentcard.remove();
 				continue;
@@ -461,6 +462,20 @@ module.exports = {
 			if (i.storage.renku) i.markSkill('renku');
 		}
 	},
+	//为牌添加知情者。
+	addCardKnower: function (cards, players) {
+		if (get.itemtype(cards) == 'card') {
+			cards = [cards];
+		}
+		cards.forEach(card => card.addKnower(players));
+	},
+	//移除牌的所有知情者。
+	clearCardKnowers: function (cards) {
+		if (get.itemtype(cards) == 'card') {
+			cards = [cards];
+		}
+		cards.forEach(card => card.clearKnowers());
+	},
 	loseAsync: function (arg) {
 		var next = game.createEvent('loseAsync');
 		next.forceDie = true;
@@ -714,6 +729,10 @@ module.exports = {
 		const cards = event.cards;
 		const pile = ui.cardPile;
 		for (let i = 0; i < cards.length; i++) {
+			if (cards[i].willBeDestroyed('cardPile', null, event)) {
+				cards[i].selfDestroy(event);
+				continue;
+			}
 			if (event.insert_index) {
 				cards[i].fix();
 				pile.insertBefore(cards[i], event.insert_index(event, cards[i]));
@@ -968,9 +987,6 @@ module.exports = {
 			delete ui.currentpopped;
 		}
 	},
-	/**
-	 * @type { Game['broadcast'] }
-	 */
 	broadcast: function () {
 		if (!lib.node || !lib.node.clients || game.online) return;
 		for (var i = 0; i < lib.node.clients.length; i++) {
@@ -979,9 +995,6 @@ module.exports = {
 			}
 		}
 	},
-	/**
-	 * @type { Game['broadcastAll'] }
-	 */
 	broadcastAll: function () {
 		if (game.online) return;
 		var argc = arguments.length;
@@ -1510,8 +1523,7 @@ module.exports = {
 	 * 
 	 * @param {string} type 
 	 * @param { (lib: import('./lib.js'), game: import('./game.js'), ui: import('./ui.js'), get: import('./get.js'), ai: import('./ai.js'), _status: import('./_status.js')) => object } content 
-	 * @param {*} [url] 
-	 * @returns 
+	 * @param {*} [url]
 	 */
 	import: function (type, content, url) {
 		if (type == 'extension') {
@@ -1661,19 +1673,21 @@ module.exports = {
 			if (typeof errorCallback != 'function') return Promise.reject(reason);
 			errorCallback(reason);
 		});
-		const fs = require("fs");
-		let path = __dirname;
-		const redo = () => {
-			path += `/${paths.pop()}`;
-			return new Promise(resolve => fs.exists(path, resolve)).then(exists => {
-				//不存在此目录
-				if (!exists) return new Promise(resolve => fs.mkdir(path, resolve));
-			}).then(() => {
-				if (paths.length) return redo();
-				if (typeof successCallback == 'function') successCallback();
-			});
-		};
-		return redo();
+		if (typeof window.require == 'function' && window.process) {
+			const fs = require("fs");
+			let path = __dirname;
+			const redo = () => {
+				path += `/${paths.pop()}`;
+				return new Promise(resolve => fs.exists(path, resolve)).then(exists => {
+					//不存在此目录
+					if (!exists) return new Promise(resolve => fs.mkdir(path, resolve));
+				}).then(() => {
+					if (paths.length) return redo();
+					if (typeof successCallback == 'function') successCallback();
+				});
+			};
+			return redo();	
+		}
 	},
 	importExtension: gnc.of(function* (data, finishLoad, exportExtension, extensionPackage) {
 		//by 来瓶可乐加冰、Rintim、Tipx-L
@@ -5093,7 +5107,9 @@ module.exports = {
 					}*/
 				}
 				else {
-					event.callHandler();
+					event.callHandler(event.getDefaultHandlerType(), event, {
+						state: 'begin'
+					});
 					if (player && player.classList.contains('dead') && !event.forceDie && event.name != 'phaseLoop') {
 						game.broadcastAll(function () {
 							while (_status.dieClose.length) {
@@ -5188,8 +5204,10 @@ module.exports = {
 						}
 					}
 					event.clearStepCache();
+					event.callHandler(event.getDefaultHandlerType(), event, {
+						state: 'end'
+					});
 					event.step++;
-					if (event.finished) event.callHandler();
 				}
 			}
 		}

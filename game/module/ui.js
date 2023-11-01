@@ -20,8 +20,9 @@ module.exports = {
 	},
 	create: {
 		//创建身份牌实例
-		identityCard: function (identity, position, info, noclick) {
-			const card = ui.create.card(position, info, noclick);
+		identityCard: function (identity, position, noclick) {
+			const card = ui.create.card(position, 'noclick', noclick);
+			card.removeEventListener(lib.config.touchscreen ? 'touchend' : 'click', ui.click.card);
 			card.classList.add('button');
 			card._customintro = uiintro => uiintro.add(`${get.translation(`${identity}${2}`)}的身份牌`);
 			const fileName = `image/card/identity_${identity}.jpg`;
@@ -76,7 +77,7 @@ module.exports = {
 			setTimeout(() => {
 				buttons.appendChild(card);
 				dialog.open();
-				ui.create.cardSpinning(card, time);
+				ui.create.cardSpinning(card);
 			}, 50);
 		},
 		/**
@@ -1336,6 +1337,11 @@ module.exports = {
 								};
 								infoconfig.connect_observe_handcard = {
 									name: '允许观看手牌',
+									init: false,
+									connect: true
+								};
+								infoconfig.connect_mount_combine = {
+									name: '合并坐骑栏',
 									init: false,
 									connect: true
 								};
@@ -2701,7 +2707,7 @@ module.exports = {
 						var cfgnode = createConfig({
 							name: '开启',
 							_name: mode,
-							init: lib.config.characters.contains(mode),
+							init: connectMenu ? (!lib.config.connect_characters.contains(mode)) : (lib.config.characters.contains(mode)),
 							onclick: togglePack
 						});
 						var cfgnodeAI = createConfig({
@@ -4192,7 +4198,7 @@ module.exports = {
 								}
 								editnode.classList.remove('disabled');
 							};
-							var clickButton = gnc.of(function* () {
+							var clickButton = lib.gnc.of(function* () {
 								if (currentButton == this) {
 									resetEditor();
 									return;
@@ -9781,14 +9787,19 @@ module.exports = {
 		},
 		player: (position, noclick) => new lib.element.Player(position, noclick),
 		connectPlayers: ip => {
-			ui.updateConnectPlayerPositions();
 			game.connectPlayers = [];
-			const numberOfPlayers = lib.configOL.number;
+			let numberOfPlayers = lib.configOL.number;
+			const gameMode = lib.configOL.mode;
+			if (gameMode == 'guozhan' || (gameMode == 'identity' && (lib.configOL.identity_mode != 'zhong' && lib.configOL.identity_mode != 'purple'))) {
+				numberOfPlayers = 10;
+			}
+			ui.updateConnectPlayerPositions(numberOfPlayers);
 			for (let position = 0; position < numberOfPlayers; position++) {
 				const player = ui.create.player(ui.window);
 				player.dataset.position = position;
 				player.classList.add('connect');
 				game.connectPlayers.push(player);
+				if (position >= lib.configOL.number) player.classList.add('unselectable2');
 			}
 
 			var bar = ui.create.div(ui.window);
@@ -9802,7 +9813,7 @@ module.exports = {
 			ipbar.style.borderRadius = '2px';
 			ipbar.style.position = 'relative';
 
-			var button = ui.create.div('.menubutton.large.highlight.connectbutton.connectbutton1.pointerdiv', game.online ? '退出联机' : '开始游戏', ui.window, function () {
+			var button = ui.create.div('.menubutton.large.highlight.connectbutton.pointerdiv', game.online ? '退出联机' : '开始游戏', ui.window, function () {
 				if (button.clicked) return;
 				if (game.online) {
 					if (game.onlinezhu) {
@@ -9828,37 +9839,13 @@ module.exports = {
 				}
 				button.delete();
 				bar.delete();
-				shareButton.delete();
 				delete ui.connectStartButton;
 				delete ui.connectStartBar;
-				delete ui.connectShareButton;
 				button.clicked = true;
-			});
-
-			var shareButton = ui.create.div('.menubutton.large.highlight.connectbutton.connectbutton2.pointerdiv', '分享房间', ui.window, function () {
-				var text = `无名杀-联机-${lib.translate[get.mode()]}-${game.connectPlayers.filter(p => p.avatar).length}/${game.connectPlayers.filter(p => !p.classList.contains('unselectable2')).length}\n${get.connectNickname()}邀请你加入${game.roomId}房间\n联机地址:${game.ip}\n请先通过游戏内菜单-开始-联机中启用“读取邀请链接”选项`;
-				window.focus();
-				if (navigator.clipboard && lib.node) {
-					navigator.clipboard.writeText(text).then(() => {
-						game.alert(`分享内容复制成功`);
-					}).catch(e => {
-						game.alert(`分享内容复制失败${e || ''}`);
-					});
-				} else {
-					var input = ui.create.node('textarea', ui.window, { opacity: '0' });
-					input.value = text;
-					input.focus();
-					input.select();
-					var result = document.execCommand('copy');
-					input.blur();
-					ui.window.removeChild(input);
-					game.alert(`分享内容复制${result ? '成功' : '失败'}`);
-				}
 			});
 
 			ui.connectStartButton = button;
 			ui.connectStartBar = bar;
-			ui.connectShareButton = shareButton;
 		},
 		players: numberOfPlayers => {
 			if (numberOfPlayers === 0) {
@@ -14602,13 +14589,13 @@ module.exports = {
 	 */
 	updatePlayerPositions: numberOfPlayers => {
 		if (typeof numberOfPlayers != 'number') numberOfPlayers = ui.arena.dataset.number;
-		//当人数小于8时，还是用以前的布局。
-		if (!numberOfPlayers || numberOfPlayers < 9) return;
+		//当人数不超过8人时，还是用以前的布局
+		if (!numberOfPlayers || numberOfPlayers <= 8) return;
 		const playerPositions = ui.playerPositions;
 		while (playerPositions.length) {
 			playerPositions.pop().remove();
 		}
-		//单个人物的宽度。这里要设置玩家的实际的宽度
+		//单个人物的宽度，这里要设置玩家的实际的宽度
 		const temporaryPlayer = ui.create.div('.player', ui.arena).hide();
 		const computedStyle = getComputedStyle(temporaryPlayer);
 		const scale = 6 / numberOfPlayers;
@@ -14619,10 +14606,10 @@ module.exports = {
 		//列数，即假如8人场，除去自己后，上面7个人占7列
 		const columnCount = numberOfPlayers - 1;
 		const percentage = 90 / (columnCount - 1);
-		//仅当游戏人数大于8人，且玩家的座位号大于0时，设置玩家的位置。因为0号位是game.me在最下方，无需设置。
+		//仅当游戏人数大于8人，且玩家的座位号大于0时，设置玩家的位置；因为0号位是game.me在最下方，无需设置
 		for (let ordinal = 1; ordinal < numberOfPlayers; ordinal++) {
 			const reversedOrdinal = columnCount - ordinal;
-			//动态计算玩家的top属性，实现拱桥的效果。只让两边的各两个人向下偏移一些
+			//动态计算玩家的top属性，实现拱桥的效果；只让两边的各两个人向下偏移一些
 			const top = Math.max(0, Math.round(numberOfPlayers / 5) - Math.min(Math.abs(ordinal - 1), Math.abs(reversedOrdinal))) * quarterHeight;
 			playerPositions.push(lib.init.sheet([
 				`#arena[data-number='${numberOfPlayers}']>.player[data-position='${ordinal}']{`,

@@ -116,12 +116,13 @@
 		return log;
 	}
 
-	Error.stackTraceLimit = 100;
+	// Error.stackTraceLimit = 100;
 
 	/**
-		 * 对带协议的路径进行兼容
-		 * @param {string} path
-		 */
+	 * 对带协议的路径进行兼容
+	 * @todo file协议的话有个初始/会导致解析错误
+	 * @param {string} path
+	 */
 	function convertToAbsolutePath(path) {
 		// 使用正则表达式替换相对路径
 		path = path.replace(/\/\.\//g, '/');
@@ -143,7 +144,7 @@
 			if (parts[i] === '.' || parts[i] === '') {
 				// 忽略当前路径和空路径
 				continue;
-			} else if (parts[i] === '..') {
+			} else if (parts[i] === '..' && stack.length > 0) {
 				// 弹出栈中的最后一个路径
 				stack.pop();
 			} else {
@@ -168,69 +169,88 @@
 	const modules = window.modules = {};
 
 	/**
+	 * @class
 	 * @param {string} id
 	 */
-	function Module(id) {
-		this.id = id;
-		let exports = Object.create(null);
-		if (Symbol.toStringTag) {
-			const fileName = id.split(/[/\\]/).pop();
-			// 一般情况下无同名文件的解决办法
+	class Module {
+		constructor(id) {
+			/**
+			 * @type { String } 模块相对路径名
+			 */
+			this.id = id;
+			let exports = Object.create(null);
+			// let exports = {};
+			if (Symbol.toStringTag && id.startsWith('./')) {
+				const fileName = id.split(/[/\\]/).pop();
+				// 一般情况下无同名文件的解决办法
+				// @ts-ignore
+				exports[Symbol.toStringTag] = fileName.slice(0, fileName.indexOf('.'));
+			}
 			// @ts-ignore
-			exports[Symbol.toStringTag] = fileName.slice(0, fileName.indexOf('.'));
-		}
-		// @ts-ignore
-		modules[id] = this;
-		// 类型提示
-		this.exports = null;
-		Object.defineProperty(this, 'exports', {
-			enumerable: true,
-			configurable: true,
-			get() { return exports },
-			set(newExports) {
-				//modules[id] = newExports;
-				if (typeof newExports == 'object') {
-					for (const key in exports) {
-						delete exports[key];
+			modules[id] = this;
+			/**
+			 * @type { any } 模块导出数据
+			 */
+			this.exports = null;
+			Object.defineProperty(this, 'exports', {
+				enumerable: true,
+				configurable: true,
+				get() { return exports; },
+				set(newExports) {
+					//modules[id] = newExports;
+					if (Object.prototype.toString.call(newExports) == '[object Object]') {
+						for (const key in exports) {
+							delete exports[key];
+						}
+						Object.assign(exports, newExports);
+					} else {
+						exports = newExports;
 					}
-					Object.assign(exports, newExports);
-				} else {
-					exports = newExports;
-				}
-				if (Symbol.toStringTag && exports[Symbol.toStringTag]) {
-					//console.time(exports[Symbol.toStringTag]);
-					function forEach(obj) {
-						for (const key in obj) {
-							if (Object.hasOwnProperty.call(obj, key)) {
-								try {
-									const descriptor = Object.getOwnPropertyDescriptor(obj[key], key);
-									if (descriptor && (descriptor.get || descriptor.set)) continue;
-									obj[key][Symbol.toStringTag] = `${obj[Symbol.toStringTag]}.${key}`;
-									forEach(obj[key]);
-								} catch (error) {}
+					if (Symbol.toStringTag && exports[Symbol.toStringTag]) {
+						console.time(exports[Symbol.toStringTag]);
+						function forEach(obj) {
+							for (const key in obj) {
+								if (Object.hasOwnProperty.call(obj, key)) {
+									try {
+										const descriptor = Object.getOwnPropertyDescriptor(obj[key], key);
+										if (descriptor && (descriptor.get || descriptor.set)) continue;
+										obj[key][Symbol.toStringTag] = `${obj[Symbol.toStringTag]}.${key}`;
+										forEach(obj[key]);
+									} catch (error) { }
+								}
 							}
 						}
+						forEach(exports);
+						console.timeEnd(exports[Symbol.toStringTag]);
 					}
-					forEach(exports);
-					//console.timeEnd(exports[Symbol.toStringTag]);
 				}
-			}
-		});
-
-		this.require = _id => require((_id.startsWith('./') || _id.startsWith('../')) ? (id.split('/').slice(0, -1).join('/') + '/' + _id) : _id);
+			});
+			/**
+			 * @type { NodeRequire } 模块中使用的require
+			 */
+			// @ts-ignore
+			this.require = _id => require((_id.startsWith('./') || _id.startsWith('../')) ? (id.split('/').slice(0, -1).join('/') + '/' + _id) : _id);
+			/**
+			 * @type { String | null } 模块导出的文本数据
+			 */
+			this.data = null;
+		}
+		/**
+		 * 模块根据绝对路径的后缀名，调用挂载在对象上相应的方法
+		 */
+		load() {
+			// 取出当前实例上挂载的绝对路径，获取后缀名
+			let ext = '.' + getFileType(this.id);
+			// 根据后缀名调用对应的处理函数
+			// @ts-ignore
+			(require.extensions[ext] || require.extensions['.js'])(this);
+		}
 	}
 
-	// 根据绝对路径的后缀名，调用挂载在对象上相应的方法
-	Module.prototype.load = function () {
-		// 取出当前实例上挂载的绝对路径，获取后缀名
-		let ext = '.' + getFileType(this.id);
-		// 根据后缀名调用对应的处理函数
-		// @ts-ignore
-		(require.extensions[ext] || require.extensions['.js'])(this);
-	};
+
 
 	// @ts-ignore
-	window.Module = Module;
+	// window.Module = Module;
 
 	/** @type { import('../typings/magic-string.cjs.d.ts')['default'] } */
 	var MagicString;
@@ -240,8 +260,8 @@
 	const require = (function () {
 		const winRequire = window.require;
 
-		const require = function (id) {
-			//console.log(id);
+		const require = function (/** @type {string} */ id) {
+			// console.log(id);
 			if (modules[id]) {
 				return modules[id].exports;
 			}
@@ -251,7 +271,7 @@
 			//console.log(id);
 			if (id.startsWith('./') || id.startsWith('../')) {
 				id = (id.startsWith('./') ? './' : '') + convertToAbsolutePath(id);
-				//console.log(id);
+				// console.log(id);
 			} else if (winRequire && !id.startsWith('./') && !id.startsWith('../')) {
 				let exports = winRequire(id);
 				if (exports) {
@@ -260,6 +280,7 @@
 				}
 			}
 			if (modules[id]) {
+				// console.log(`模块[${id}]加载成功`);
 				return modules[id].exports;
 			} else {
 				const xhr = new XMLHttpRequest();
@@ -277,6 +298,7 @@
 					throw new Error(`模块[${id}]加载失败`);
 				}
 				const _module = new Module(id);
+				_module.data = data;
 				if (id.endsWith('.js')) {
 					let fun;
 					//const functionHeader = `"use strict";\n{\nlet module = window.modules['${id}'];\nlet exports = module.exports;\nlet require = module.require;\nlet __filename = '${id.slice(id.lastIndexOf('/') + 1)}';\nlet __dirname = '${!!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/'))}';\n`;
@@ -290,7 +312,7 @@
 							const source = new MagicString(data);
 							source.prepend(functionHeader).append(FunctionTail);
 							const sourcePath = convertToAbsolutePath('noname://' + id);
-							console.log(sourcePath);
+							// console.log(sourcePath);
 							// generates a v3 sourcemap
 							const map = source.generateMap({
 								// hires: true,
@@ -298,8 +320,8 @@
 								file: id.split(/[/\\]/).pop() + '.map',
 								includeContent: true
 							});
-							console.log(map);
-							console.log(JSON.parse(map.toString()));
+							// console.log(map);
+							// console.log(JSON.parse(map.toString()));
 							mapUrl = '\n//# sourceMappingURL=' + map.toUrl();
 						}
 
@@ -307,6 +329,7 @@
 						// console.log(str);
 						fun = eval(str);
 						fun(_module.exports, _module.require, _module, /* __filename */ `${id.split(/[/\\]/).pop()}`, /* __dirname */ `${!!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/'))}`, /* process */ window.process, /* global */ window);
+						// console.log(`模块[${id}]加载成功`);
 						return modules[id].exports;
 					} catch (e) {
 						delete modules[id];
@@ -314,7 +337,7 @@
 							e.stack = e.stack.replace('\n    ', str => str + `at ${(nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id}` + str);
 						}
 						console.error(`模块[${id}]加载失败`);
-						//console.error(fun);
+						console.error(fun);
 						console.log(e.toString());
 						throw e;
 					}
@@ -354,6 +377,7 @@
 				} else {
 					try {
 						_module.load();
+						// console.log(`模块[${id}]加载成功`);
 						return modules[id].exports;
 					} catch (e) {
 						delete modules[id];
@@ -364,17 +388,21 @@
 			}
 		};
 		require.main = winRequire ? winRequire.main : undefined;
-		require.cache = winRequire ? winRequire.cache : modules;
+		require.cache = modules;
+		/**
+		 * @type { { [key: string]: (module: NodeModule) => any; } }
+		 */
 		require.extensions = Object.assign(Object.create(null), {
 			// 其实用不到js这个
 			// 但是导入别的后缀名是可以默认按照这个来
-			'.js': module => {
+			'.js': (/** @type { Module } */ module) => {
 				module.exports = module.data;
 			},
-			'.json': module => {
+			'.json': (/** @type { Module } */module) => {
+				// @ts-ignore
 				module.exports = JSON.parse(module.data);
 			},
-			'.node': module => {
+			'.node': (/** @type { Module } */module) => {
 				if (winRequire) {
 					module.exports = winRequire(module.id);
 				} else throw '还未支持解析.node文件';

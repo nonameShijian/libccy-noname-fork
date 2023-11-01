@@ -15,7 +15,6 @@ const userAgent = navigator.userAgent.toLowerCase();
 const GeneratorFunction = (function* () { }).constructor;
 
 module.exports = {
-	err: e => { throw e },
 	configprefix: 'noname_0.9_',
 	versionOL: 27,
 	updateURLS: {
@@ -525,8 +524,8 @@ module.exports = {
 			['tao', 3]
 		]),
 		effect: new Map([
-			['sha', event => {
-				if (event.step != 1) return;
+			['sha', (event, option) => {
+				if (event.step != 0 || option.state != 'end') return;
 				game.log(event.player, '触发了强化效果');
 				game.log(event.card, '抵消所需要的', new lib.element.VCard({
 					name: 'shan'
@@ -539,8 +538,8 @@ module.exports = {
 					else map[id].shanRequired = 2;
 				});
 			}],
-			['shan', event => {
-				if (event.step != 1) return;
+			['shan', (event, option) => {
+				if (event.step != 0 || option.state != 'end') return;
 				game.log(event.player, '触发了强化效果');
 				game.log('使用', event.card, '时视为两张', new lib.element.VCard({
 					name: 'shan'
@@ -549,8 +548,8 @@ module.exports = {
 					trigger.getParent(2).decrease('shanRequired', 1);
 				});
 			}],
-			['juedou', event => {
-				if (event.step != 1) return;
+			['juedou', (event, option) => {
+				if (event.step != 0 || option.state != 'end') return;
 				game.log(event.player, '触发了强化效果');
 				game.log('对', event.card, '的目标造成伤害时，伤害+1');
 				event.player.when({
@@ -559,14 +558,14 @@ module.exports = {
 					trigger.increase('num');
 				});
 			}],
-			['huogong', event => {
-				if (event.step != 1) return;
+			['huogong', (event, option) => {
+				if (event.step != 0 || option.state != 'end') return;
 				game.log(event.player, '触发了强化效果');
 				game.log(event.card, '造成的伤害+1');
 				event.increase('baseDamage', 1);
 			}],
-			['tao', event => {
-				if (event.step != 1) return;
+			['tao', (event, option) => {
+				if (event.step != 0 || option.state != 'end') return;
 				game.log(event.player, '触发了强化效果');
 				game.log(event.card, '回复的体力+1');
 				event.increase('baseDamage', 1);
@@ -4159,19 +4158,15 @@ module.exports = {
 					get init() {
 						return lib.configMenu.view.config.show_characternamepinyin.init;
 					},
-					set init(v) {},
 					get unfrequent() {
 						return lib.configMenu.view.config.show_characternamepinyin.unfrequent;
 					},
-					set unfrequent(v) {},
 					get item() {
 						return lib.configMenu.view.config.show_characternamepinyin.item;
 					},
-					set item(v) {},
 					get visualMenu() {
 						return lib.configMenu.view.config.show_characternamepinyin.visualMenu;
-					},
-					set visualMenu(v) {}
+					}
 				}
 			}
 		},
@@ -5550,6 +5545,13 @@ module.exports = {
 					frequent: true,
 					restart: true,
 				},
+				connect_aozhan: {
+					name: '鏖战模式',
+					init: true,
+					intro: '若开启此选项，则将在游戏中引入“鏖战模式”的规则：<br>当游戏中仅剩四名或更少角色时（七人以下游戏时改为三名或更少），若此时全场没有超过一名势力相同的角色，则从一个新的回合开始，游戏进入鏖战模式直至游戏结束。<br>◇在鏖战模式下，【桃】只能当做【杀】或【闪】使用或打出，不能用来回复体力。<br>注：进入鏖战模式后，即使之后有两名或者更多势力相同的角色出现，仍然不会取消鏖战模式。',
+					frequent: true,
+					restart: true,
+				},
 				get connect_separatism() {
 					return lib.mode.guozhan.config.separatism;
 				},
@@ -5563,13 +5565,6 @@ module.exports = {
 					init: 'mark',
 					frequent: true,
 					intro: '第一个明置武将牌的角色可获得首亮奖励'
-				},
-				connect_aozhan: {
-					name: '鏖战模式',
-					init: true,
-					intro: '若开启此选项，则将在游戏中引入“鏖战模式”的规则：<br>当游戏中仅剩四名或更少角色时（七人以下游戏时改为三名或更少），若此时全场没有超过一名势力相同的角色，则从一个新的回合开始，游戏进入鏖战模式直至游戏结束。<br>◇在鏖战模式下，【桃】只能当做【杀】或【闪】使用或打出，不能用来回复体力。<br>注：进入鏖战模式后，即使之后有两名或者更多势力相同的角色出现，仍然不会取消鏖战模式。',
-					frequent: true,
-					restart: true,
 				},
 				connect_viewnext: {
 					name: '观看下家副将',
@@ -5643,6 +5638,13 @@ module.exports = {
 					frequent: true,
 					restart: true,
 				},
+				aozhan: {
+					name: '鏖战模式',
+					init: true,
+					frequent: true,
+					restart: true,
+					intro: '若开启此选项，则将在游戏中引入“鏖战模式”的规则：<br>当游戏中仅剩四名或更少角色时（七人以下游戏时改为三名或更少），若此时全场没有超过一名势力相同的角色，则从一个新的回合开始，游戏进入鏖战模式直至游戏结束。<br>◇在鏖战模式下，【桃】只能当做【杀】或【闪】使用或打出，不能用来回复体力。<br>注：进入鏖战模式后，即使之后有两名或者更多势力相同的角色出现，仍然不会取消鏖战模式。',
+				},
 				separatism: {
 					name: '群雄割据',
 					init: false,
@@ -5660,13 +5662,6 @@ module.exports = {
 					init: 'mark',
 					frequent: true,
 					intro: '第一个明置身份牌的角色可获得摸牌奖励'
-				},
-				aozhan: {
-					name: '鏖战模式',
-					init: true,
-					frequent: true,
-					restart: true,
-					intro: '若开启此选项，则将在游戏中引入“鏖战模式”的规则：<br>当游戏中仅剩四名或更少角色时（七人以下游戏时改为三名或更少），若此时全场没有超过一名势力相同的角色，则从一个新的回合开始，游戏进入鏖战模式直至游戏结束。<br>◇在鏖战模式下，【桃】只能当做【杀】或【闪】使用或打出，不能用来回复体力。<br>注：进入鏖战模式后，即使之后有两名或者更多势力相同的角色出现，仍然不会取消鏖战模式。',
 				},
 				viewnext: {
 					name: '观看下家副将',
@@ -6501,12 +6496,6 @@ module.exports = {
 					frequent: true,
 					intro: '在用户填写的IP地址没有直接指定使用WS/WSS协议的情况下，默认使用WSS协议，而非WS协议来连接到联机服务器。<br>请不要轻易勾选此项！',
 				},
-				read_clipboard: {
-					name: '读取邀请链接',
-					init: false,
-					frequent: true,
-					intro: '读取剪贴板以解析邀请链接自动加入联机房间',
-				}
 			}
 		},
 		boss: {
@@ -7481,7 +7470,6 @@ module.exports = {
 	/**
 	 * @type {import('path')}
 	 */
-	// @ts-ignore
 	path: {},
 	getErrorTip: msg => {
 		if (typeof msg != 'string') {
@@ -8294,7 +8282,7 @@ module.exports = {
 
 				var that = this;
 				this.timeout = setTimeout(function () {
-					if (!that.destroyed) {
+					if (!that._selfDestroyed) {
 						position.appendChild(that);
 					}
 					that.classList.remove('removing');
@@ -8389,36 +8377,29 @@ module.exports = {
 			HTMLDivElement.prototype.setBackgroundImage = function (img) {
 				this.style.backgroundImage = `url("${lib.assetURL}${img}")`;
 				return this;
-			};
-			/**
-			 * @listens module:hurler~touchend
-			 * @listens module:hurler~click
-			 */
-			HTMLDivElement.prototype.listen = function (func) {
-				if (lib.config.touchscreen) {
-					this.addEventListener('touchend', function (e) {
-						if (!_status.dragged) {
-							func.call(this, e);
+			},
+				HTMLDivElement.prototype.listen = function (func) {
+					if (lib.config.touchscreen) {
+						this.addEventListener('touchend', function (e) {
+							if (!_status.dragged) {
+								func.call(this, e);
+							}
+						});
+						var fallback = function (e) {
+							if (!_status.touchconfirmed) {
+								func.call(this, e);
+							}
+							else {
+								this.removeEventListener('click', fallback);
+							}
 						}
-					});
-					var fallback = function (e) {
-						if (!_status.touchconfirmed) {
-							func.call(this, e);
-						}
-						else {
-							this.removeEventListener('click', fallback);
-						}
+						this.addEventListener('click', fallback);
 					}
-					this.addEventListener('click', fallback);
-				}
-				else {
-					this.addEventListener('click', func);
-				}
-				return this;
-			};
-			/**
-			 * @listens module:hurler~webkitTransitionEnd
-			 */
+					else {
+						this.addEventListener('click', func);
+					}
+					return this;
+				};
 			HTMLDivElement.prototype.listenTransition = function (func, time) {
 				let done = false;
 				const callback = () => {
@@ -8732,23 +8713,6 @@ module.exports = {
 					return list[0];
 				}
 			});
-			/**
-			 * @deprecated
-			 * !!!WARNING!!!
-			 * Will be deprecated in next verision!
-			 * Use {@link VCard#hasNature} instead.
-			 */
-			Object.defineProperty(Object.prototype, 'hasNature', {
-				configurable: true,
-				enumerable: false,
-				writable: true,
-				value: function (nature, player) {
-					var natures = get.natureList(this, player);
-					if (!nature) return natures.length > 0;
-					if (nature == 'linked') return natures.some(n => lib.linked.includes(n));
-					return get.is.sameNature(natures, nature);
-				}
-			});
 			window.onkeydown = function (e) {
 				if (!ui.menuContainer || !ui.menuContainer.classList.contains('hidden')) {
 					if (e.keyCode == 116 || ((e.ctrlKey || e.metaKey) && e.keyCode == 82)) {
@@ -8872,12 +8836,12 @@ module.exports = {
 					if (err && err.stack) {
 						try {
 							//源码+行列
-							const sourceCode = err.stack.split('\n')[1].match(/\(\S+\)/)[0].slice(1,-1);
+							const sourceCode = err.stack.split('\n')[1].match(/\(\S+\)/)[0].slice(1, -1);
 							src = sourceCode.split(':').slice(0, -2).join(':');
 							if (('./' + src.replace(location.href, '').replace(lib.assetURL, '')) in window.modules) {
 								line = line - 1;
 							}
-						} catch (error) {}
+						} catch (error) { }
 					}
 				}
 				let str = `错误文件: ${typeof src == 'string' ? decodeURI(src).replace(lib.assetURL, '').replace(winPath, '') : '未知文件'}`;
@@ -8961,12 +8925,7 @@ module.exports = {
 						}
 					}
 				}
-				if (err && err.stack) {
-					str += '\n' + decodeURI(err.stack).replace(new RegExp(lib.assetURL, 'g'), '').replace(new RegExp(winPath, 'g'), '');
-					console.log(str);
-					console.log(err.stack);
-					console.trace("error");
-				}
+				if (err && err.stack) str += '\n' + decodeURI(err.stack).replace(new RegExp(lib.assetURL, 'g'), '').replace(new RegExp(winPath, 'g'), '');
 				alert(str);
 				window.ea = Array.from(arguments);
 				window.em = msg;
@@ -9112,7 +9071,7 @@ module.exports = {
 					lib.configMenu.appearence.config.image_background.item.default = '默认';
 				}
 				if (pack.music) {
-					if (lib.device || typeof window.require == 'function') {
+					if (lib.device || (typeof window.require == 'function' && window.process)) {
 						lib.configMenu.audio.config.background_music.item.music_custom = '自定义音乐';
 					}
 					lib.config.all.background_music = ['music_default'];
@@ -9370,7 +9329,7 @@ module.exports = {
 				window.game = game;
 				lib.announce.init();
 				// node:path library alternative
-				if (typeof process == "undefined" || typeof module != "object" || typeof module.exports != "object") lib.init.js(`${lib.assetURL}game`, "path", () => {
+				if (typeof module != "object" || typeof module.exports != "object") lib.init.js(`${lib.assetURL}game`, "path", () => {
 					lib.path = window._noname_path;
 					delete window._noname_path;
 				}, e => {
@@ -10966,25 +10925,30 @@ module.exports = {
 			let scriptSource;
 			if (!file) scriptSource = path;
 			else scriptSource = `${path}/${file}.js`;
-			//因为lib.js是模块，所以需要将路径引导至根目录下
-			scriptSource = '../../' + scriptSource;
-			try {
-				require(scriptSource);
+			if (path.startsWith('http')) scriptSource += `?rand=${get.id()}`;
+			const xmlHttpRequest = new XMLHttpRequest();
+			let data;
+			xmlHttpRequest.addEventListener("load", () => {
+				data = xmlHttpRequest.responseText;
+				if (!data) {
+					if (typeof onError == 'function') onError(new Error(`${scriptSource}加载失败！`));
+					return;
+				}
 				if (lib.config.fuck_sojson && scriptSource.includes('extension') != -1 && scriptSource.startsWith(lib.assetURL)) {
 					const pathToRead = scriptSource.slice(lib.assetURL.length);
-					const alertMessage = `检测到您安装了使用免费版sojson进行加密的扩展。请谨慎使用这些扩展，避免游戏数据遭到破坏。\n扩展文件：${pathToRead}`;
-					if (typeof game.readFileAsText == 'function') game.readFileAsText(pathToRead, result => {
-						if (result.includes('sojson') || result.includes('jsjiami') || result.includes('var _0x')) alert(alertMessage);
-					}, () => void 0);
-					else lib.init.reqSync(pathToRead, function () {
-						const result = this.responseText;
-						if (result.includes('sojson') || result.includes('jsjiami') || result.includes('var _0x')) alert(alertMessage);
-					}, () => void 0);
+					if (data.includes('sojson') || data.includes('jsjiami') || data.includes('var _0x')) alert(`检测到您安装了使用免费版sojson进行加密的扩展。请谨慎使用这些扩展，避免游戏数据遭到破坏。\n扩展文件：${pathToRead}`);
 				}
-				if (typeof onLoad == 'function') onLoad();
-			} catch (error) {
-				if (typeof onError == 'function') onError(error);
-			}
+				try {
+					window.eval(data);
+					if (typeof onLoad == 'function') onLoad();
+				}
+				catch (error) {
+					if (typeof onError == 'function') onError(error);
+				}
+			});
+			if (typeof onError == 'function') xmlHttpRequest.addEventListener("error", onError);
+			xmlHttpRequest.open("GET", scriptSource, false);
+			xmlHttpRequest.send();
 		},
 		req: (str, onload, onerror, master) => {
 			let sScriptURL;
@@ -12254,6 +12218,10 @@ module.exports = {
 		unknown5: '六号位',
 		unknown6: '七号位',
 		unknown7: '八号位',
+		unknown8: '九号位',
+		unknown9: '十号位',
+		unknown10: '十一号位',
+		unknown11: '十二号位',
 
 		feichu_equip1: "已废除",
 		feichu_equip1_info: "武器栏已废除",
@@ -12664,14 +12632,10 @@ module.exports = {
 					event.finish();
 					return;
 				}
-				if (card.destroyed) {
-					if (player.hasSkill(card.destroyed)) {
-						delete card.destroyed;
-					}
-					else {
-						event.finish();
-						return;
-					}
+				if (card.willBeDestroyed('equip', player, event)) {
+					card.selfDestroy(event);
+					event.finish();
+					return;
 				}
 				else if (event.owner) {
 					if (event.owner.getCards('hejsx').contains(card)) {
@@ -13643,6 +13607,10 @@ module.exports = {
 				game.getGlobalHistory().cardMove.push(event);
 				var withPile = false;
 				for (var i = 0; i < cards.length; i++) {
+					if (cards[i].willBeDestroyed('discardPile', null, event)) {
+						cards[i].selfDestroy(event);
+						continue;
+					}
 					if (get.position(cards[i], true) == 'c') withPile = true;
 					cards[i].discard();
 				}
@@ -13659,6 +13627,10 @@ module.exports = {
 				game.getGlobalHistory().cardMove.push(event);
 				var withPile = false;
 				for (var i = 0; i < cards.length; i++) {
+					if (cards[i].willBeDestroyed('ordering', null, event)) {
+						cards[i].selfDestroy(event);
+						continue;
+					}
 					if (get.position(cards[i], true) == 'c') withPile = true;
 					cards[i].fix();
 					ui.ordering.appendChild(cards[i]);
@@ -13678,6 +13650,10 @@ module.exports = {
 				game.getGlobalHistory().cardMove.push(event);
 				var withPile = false;
 				for (var i = 0; i < cards.length; i++) {
+					if (cards[i].willBeDestroyed('special', null, event)) {
+						cards[i].selfDestroy(event);
+						continue;
+					}
 					if (get.position(cards[i], true) == 'c') withPile = true;
 					cards[i].fix();
 					ui.special.appendChild(cards[i]);
@@ -17410,7 +17386,7 @@ module.exports = {
 					event.dialog.addText(event.prompt2);
 				}
 				var expand_length = 0;
-				var directh = !lib.config.unauto_choose;
+				var directh = (!lib.config.unauto_choose && !event.complexSelect);
 				for (var i = 0; i < event.position.length; i++) {
 					if (event.position[i] == 'h') {
 						var hs = target.getCards('h');
@@ -17471,17 +17447,17 @@ module.exports = {
 				if (event.dialog.buttons.length == 0) {
 					event.finish();
 					return;
-				}
+				} var directFilter = (event.forced && typeof event.filterOk != 'function' && typeof event.selectButton != 'function' && event.filterButton == lib.filter.all);
 				var cs = target.getCards(event.position);
 				var select = get.select(event.selectButton);
-				if (event.forced && select[0] >= cs.length) {
+				if (directFilter && select[0] >= cs.length) {
 					event.result = {
 						bool: true,
 						buttons: event.dialog.buttons,
 						links: cs
 					}
 				}
-				else if (event.forced && directh && !event.isOnline() && select[0] == select[1]) {
+				else if (directFilter && directh && !event.isOnline() && select[0] == select[1]) {
 					event.result = {
 						bool: true,
 						buttons: event.dialog.buttons.randomGets(select[0]),
@@ -17627,16 +17603,17 @@ module.exports = {
 					event.finish();
 					return;
 				}
+				var directFilter = (event.forced && typeof event.filterOk != 'function' && typeof event.selectButton != 'function' && event.filterButton == lib.filter.all);
 				var cs = target.getCards(event.position);
 				var select = get.select(event.selectButton);
-				if (event.forced && select[0] >= cs.length) {
+				if (directFilter && select[0] >= cs.length) {
 					event.result = {
 						bool: true,
 						buttons: event.dialog.buttons,
 						links: cs
 					}
 				}
-				else if (event.forced && directh && !event.isOnline() && select[0] == select[1]) {
+				else if (directFilter && directh && !event.isOnline() && select[0] == select[1]) {
 					event.result = {
 						bool: true,
 						buttons: event.dialog.buttons.randomGets(select[0]),
@@ -17809,14 +17786,15 @@ module.exports = {
 				}
 				var cs = target.getCards(event.position);
 				var select = get.select(event.selectButton);
-				if (event.forced && select[0] >= cs.length) {
+				var directFilter = (event.forced && typeof event.filterOk != 'function' && typeof event.selectButton != 'function' && event.filterButton == lib.filter.all);
+				if (directFilter && select[0] >= cs.length) {
 					event.result = {
 						bool: true,
 						buttons: event.dialog.buttons,
 						links: cs
 					}
 				}
-				else if (event.forced && directh && !event.isOnline() && select[0] == select[1]) {
+				else if (directFilter && directh && !event.isOnline() && select[0] == select[1]) {
 					event.result = {
 						bool: true,
 						buttons: event.dialog.buttons.randomGets(select[0]),
@@ -17961,6 +17939,7 @@ module.exports = {
 				else {
 					game.log(player, '展示了', cards);
 				}
+				game.addCardKnower(cards, 'everyone');
 				game.delayx(event.delay_time || 2.5);
 				game.addVideo('showCards', player, [event.str, get.cardsInfo(cards)]);
 				"step 1"
@@ -17969,6 +17948,7 @@ module.exports = {
 			},
 			viewCards: function () {
 				"step 0"
+				game.addCardKnower(event.cards, player);
 				if (player == game.me) {
 					event.dialog = ui.create.dialog(event.str, event.cards);
 					if (event.isMine()) {
@@ -19167,7 +19147,9 @@ module.exports = {
 					for (var i in map) {
 						var owner = (_status.connectMode ? lib.playerOL : game.playerMap)[i];
 						var next = owner.lose(map[i][0], ui.special).set('type', 'gain').set('forceDie', true).set('getlx', false);
-						if (event.visible == true) next.visible = true;
+						if (event.visible == true) {
+							next.visible = true;
+						}
 						event.relatedLose = next;
 					}
 				}
@@ -19176,13 +19158,9 @@ module.exports = {
 				}
 				"step 1"
 				for (var i = 0; i < cards.length; i++) {
-					if (cards[i].destroyed) {
-						if (player.hasSkill(cards[i].destroyed)) {
-							delete cards[i].destroyed;
-						}
-						else {
-							cards.splice(i--, 1);
-						}
+					if (cards[i].willBeDestroyed('handcard', player, event)) {
+						cards[i].selfDestroy(event);
+						cards.splice(i--, 1);
 					}
 					else if (event.losing_map) {
 						for (var id in event.losing_map) {
@@ -19191,6 +19169,8 @@ module.exports = {
 								var hs = source.getCards('hejsx');
 								if (hs.contains(cards[i])) {
 									cards.splice(i--, 1);
+								} else {
+									cards[i].addKnower(event.visible ? 'everyone' : source);
 								}
 							}
 						}
@@ -19222,9 +19202,15 @@ module.exports = {
 				for (var num = 0; num < cards.length; num++) {
 					sort = lib.config.sort_card(cards[num]);
 					if (lib.config.reverse_sort) sort = -sort;
+					if (['o', 'd'].contains(get.position(cards[num], true))) {
+						cards[num].addKnower('everyone');
+					}
 					cards[num].fix();
 					cards[num].style.transform = '';
 					cards[num].addGaintag(event.gaintag);
+					if (event.knowers) {
+						cards[num].addKnower(event.knowers);//添加事件设定的知情者。
+					}
 					if (_status.discarded) {
 						_status.discarded.remove(cards[num]);
 					}
@@ -19375,13 +19361,9 @@ module.exports = {
 				}
 				"step 1"
 				for (var i = 0; i < cards.length; i++) {
-					if (cards[i].destroyed) {
-						if (player.hasSkill(cards[i].destroyed)) {
-							delete cards[i].destroyed;
-						}
-						else {
-							cards.splice(i--, 1);
-						}
+					if (cards[i].willBeDestroyed('expansion', player, event)) {
+						cards[i].selfDestroy(event);
+						cards.splice(i--, 1);
 					}
 					else if (event.losing_map) {
 						for (var id in event.losing_map) {
@@ -19594,11 +19576,25 @@ module.exports = {
 					cards[i].recheck();
 
 					var info = lib.card[cards[i].name];
-					if (info.destroy || cards[i]._destroy) {
-						cards[i].delete();
-						cards[i].destroyed = info.destroy || cards[i]._destroy;
+					if (cards[i].hasOwnProperty('_destroy')) {
+						if (cards[i]._destroy) {
+							cards[i].delete();
+							cards[i].destroyed = cards[i]._destroy;
+							continue;
+						}
 					}
-					else if (event.position) {
+					else if (cards[i].hasOwnProperty('destroyed')) {
+						if (event.getlx !== false && event.position && cards[i].willBeDestroyed(event.position.id, null, event)) {
+							cards[i].selfDestroy(event);
+							continue;
+						}
+					}
+					else if (info.destroy) {
+						cards[i].delete();
+						cards[i].destroyed = info.destroy;
+						continue;
+					}
+					if (event.position) {
 						if (_status.discarded) {
 							if (event.position == ui.discardPile) {
 								_status.discarded.add(cards[i]);
@@ -19674,6 +19670,10 @@ module.exports = {
 				event.js = js;
 				event.ss = ss;
 				event.xs = xs;
+				game.clearCardKnowers(hs);
+				if (hs.length && !event.visible) {
+					player.getCards('h').forEach(hcard => { hcard.clearKnowers(); });
+				}
 				"step 2"
 				if (num < cards.length) {
 					if (event.es.contains(cards[num])) {
@@ -19721,7 +19721,7 @@ module.exports = {
 				"step 4"
 				if (event.toRenku) {
 					_status.renku.addArray(cards.filter(function (card) {
-						return !card.destroyed;
+						return !card.willBeDestroyed('renku', null, event);
 					}));
 					if (_status.renku.length > 6) {
 						var cards = _status.renku.splice(0, _status.renku.length - 6);
@@ -20256,14 +20256,10 @@ module.exports = {
 					else if (get.position(cards[0]) == 'c') event.updatePile = true;
 				}
 				"step 1"
-				if (cards[0].destroyed) {
-					if (player.hasSkill(cards[0].destroyed)) {
-						delete cards[0].destroyed;
-					}
-					else {
-						event.finish();
-						return;
-					}
+				if (cards[0].willBeDestroyed('judge', player, event)) {
+					cards[0].selfDestroy(event);
+					event.finish();
+					return;
 				}
 				else if (event.relatedLose) {
 					var owner = event.relatedLose.player;
@@ -20520,6 +20516,8 @@ module.exports = {
 				for (i = 0; i < bottom.length; i++) {
 					ui.cardPile.appendChild(bottom[i]);
 				}
+				game.addCardKnower(top, player);
+				game.addCardKnower(bottom, player);
 				player.popup(get.cnNumber(top.length) + '上' + get.cnNumber(bottom.length) + '下');
 				game.log(player, '将' + get.cnNumber(top.length) + '张牌置于牌堆顶');
 				game.updateRoundNumber();
@@ -20882,6 +20880,36 @@ module.exports = {
 				return this.getCards('h', function (card) {
 					return get.is.shownCard(card);
 				});
+			}
+			//获取该角色被other所知的牌。
+			getKnownCards(other, filter) {
+				if (!other) other = _status.event.player;
+				if (!other) other = this;
+				if (!filter) filter = (card) => { return true };
+				return this.getCards('h', function (card) {
+					return card.isKnownBy(other) && filter(card);
+				});
+			}
+			//判断此角色的手牌是否已经被看光了。
+			isAllCardsKnown(other) {
+				if (!other) other = _status.event.player;
+				if (!other) other = this;
+				return this.countCards('h', function (card) {
+					return !card.isKnownBy(other);
+				}) == 0;
+			}
+			//判断此角色是否有被知的牌。
+			hasKnownCards(other, filter) {
+				if (!other) other = _status.event.player;
+				if (!other) other = this;
+				if (!filter) filter = (card) => { return true };
+				return this.countCards('h', function (card) {
+					return card.isKnownBy(other) && filter(card);
+				}) > 0;
+			}
+			//数此角色被知道的牌。
+			countKnownCards(other, filter) {
+				return this.getKnownCards(other, filter).length;
 			}
 			//Execute the delay card effect
 			//执行延时锦囊牌效果
@@ -21992,31 +22020,11 @@ module.exports = {
 				}
 				var skills = info[3].slice(0);
 				this.clearSkills(true);
-				this.classList.add('fullskin');
-				if (!game.minskin && get.is.newLayout() && !info[4].contains('minskin')) {
-					this.classList.remove('minskin');
-					this.node.avatar.setBackground(character, 'character');
-				}
-				else {
-					this.node.avatar.setBackground(character, 'character');
-					if (info[4].contains('minskin')) {
-						this.classList.add('minskin');
-					}
-					else if (game.minskin) {
-						this.classList.add('minskin');
-					}
-					else {
-						this.classList.remove('minskin');
-					}
-				}
 
 				var hp1 = get.infoHp(info[2]);
 				var maxHp1 = get.infoMaxHp(info[2]);
 				var hujia1 = get.infoHujia(info[2]);
 
-				this.node.avatar.show();
-				this.node.count.show();
-				this.node.equips.show();
 				this.name = character;
 				this.name1 = character;
 				this.sex = info[0];
@@ -22035,14 +22043,8 @@ module.exports = {
 					if (!this.hiddenSkills) this.hiddenSkills = [];
 					this.hiddenSkills.addArray(skills);
 					skills = [];
-					this.classList.add(_status.video ? 'unseen_v' : 'unseen');
 					this.name = 'unknown';
-					if (!this.node.name_seat && !_status.video) {
-						this.node.name_seat = ui.create.div('.name.name_seat', get.verticalStr(get.translation(this.name)), this);
-						this.node.name_seat.dataset.nature = get.groupnature(this.group);
-					}
 					this.sex = 'male';
-					//this.group='unknown';
 					this.storage.nohp = true;
 					skills.add('g_hidden_ai');
 				}
@@ -22054,10 +22056,7 @@ module.exports = {
 					if (!info2[4]) {
 						info2[4] = [];
 					}
-					this.classList.add('fullskin2');
-					this.node.avatar2.setBackground(character2, 'character');
 
-					this.node.avatar2.show();
 					this.name2 = character2;
 					var hp2 = get.infoHp(info2[2]);
 					var maxHp2 = get.infoMaxHp(info2[2]);
@@ -22097,17 +22096,13 @@ module.exports = {
 							this.hp = hp1 + hp2 - 3;
 						};
 					}
-					this.node.count.classList.add('p2');
 					if (info2[4].contains('hiddenSkill') && !this.noclick) {
 						if (!this.hiddenSkills) this.hiddenSkills = [];
 						this.hiddenSkills.addArray(info2[3]);
-						this.classList.add(_status.video ? 'unseen2_v' : 'unseen2');
 						this.storage.nohp = true;
 						skills.add('g_hidden_ai');
 					}
 					else skills = skills.concat(info2[3]);
-
-					this.node.name2.innerHTML = get.slimName(character2);
 				}
 				if (this.storage.nohp) {
 					this.storage.rawHp = this.hp;
@@ -22128,6 +22123,9 @@ module.exports = {
 					this.checkConflict();
 				}
 				lib.group.add(this.group);
+
+				this.$init(character, character2);
+
 				if (this.inits) {
 					for (var i = 0; i < this.inits.length; i++) {
 						this.inits[i](this);
@@ -22139,6 +22137,76 @@ module.exports = {
 					}
 				}
 				if (update !== false) this.$update();
+				return this;
+			}
+			$init(character, character2) {
+				this.classList.add('fullskin');
+				var info = lib.character[character];
+				if (!info) {
+					info = ['', '', 1, [], []];
+				}
+				if (!info[4]) {
+					info[4] = [];
+				}
+
+				if (!game.minskin && get.is.newLayout() && !info[4].contains('minskin')) {
+					this.classList.remove('minskin');
+					this.node.avatar.setBackground(character, 'character');
+				}
+				else {
+					this.node.avatar.setBackground(character, 'character');
+					if (info[4].contains('minskin')) {
+						this.classList.add('minskin');
+					}
+					else if (game.minskin) {
+						this.classList.add('minskin');
+					}
+					else {
+						this.classList.remove('minskin');
+					}
+				}
+
+				this.node.avatar.show();
+				this.node.count.show();
+				this.node.equips.show();
+
+				this.node.intro.innerHTML = lib.config.intro;
+				this.node.name.dataset.nature = get.groupnature(this.group);
+				lib.setIntro(this);
+				this.node.name.innerHTML = get.slimName(character);
+				if (this.classList.contains('minskin') && this.node.name.querySelectorAll('br').length >= 4) {
+					this.node.name.classList.add('long');
+				}
+				if (info[4].contains('hiddenSkill') && !this.noclick) {
+					this.classList.add(_status.video ? 'unseen_v' : 'unseen');
+					if (!this.node.name_seat && !_status.video) {
+						this.node.name_seat = ui.create.div('.name.name_seat', get.verticalStr(get.translation(this.name)), this);
+						this.node.name_seat.dataset.nature = get.groupnature(this.group);
+					}
+				}
+				if (character2 && lib.character[character2]) {
+					var info2 = lib.character[character2];
+					if (!info2) {
+						info2 = ['', '', 1, [], []];
+					}
+					if (!info2[4]) {
+						info2[4] = [];
+					}
+					this.classList.add('fullskin2');
+					this.node.avatar2.setBackground(character2, 'character');
+					this.node.avatar2.show();
+					this.name2 = character2;
+
+					this.node.count.classList.add('p2');
+					if (info2[4].contains('hiddenSkill') && !this.noclick) {
+						this.classList.add(_status.video ? 'unseen2_v' : 'unseen2');
+					}
+					this.node.name2.innerHTML = get.slimName(character2);
+				}
+				if (this.storage.nohp) {
+					this.node.hp.hide();
+				}
+
 				return this;
 			}
 			initOL(name, character) {
@@ -22231,35 +22299,21 @@ module.exports = {
 			reinit(from, to, maxHp, online) {
 				var info1 = lib.character[from];
 				var info2 = lib.character[to];
-				var smooth = true;
+				var smooth = true, replaced = null;
 				if (maxHp == 'nosmooth') {
 					smooth = false;
 					maxHp = null;
 				}
 				if (this.name2 == from) {
 					this.name2 = to;
-					if (this.isUnseen(0) && !this.isUnseen(1)) {
-						this.sex = info2[0];
-						this.name = to;
-					}
-					if (smooth) this.smoothAvatar(true);
-					this.node.avatar2.setBackground(to, 'character');
-					this.node.name2.innerHTML = get.slimName(to);
 				}
 				else if (this.name == from || this.name1 == from) {
 					if (this.name1 == from) {
 						this.name1 = to;
 					}
-					if (!this.classList.contains('unseen2')) {
+					if (!this.isUnseen(1)) {
 						this.name = to;
 						this.sex = info2[0];
-					}
-					if (smooth) this.smoothAvatar(false);
-					this.node.avatar.setBackground(to, 'character');
-					this.node.name.innerHTML = get.slimName(to);
-
-					if (this == game.me && ui.fakeme) {
-						ui.fakeme.style.backgroundImage = this.node.avatar.style.backgroundImage;
 					}
 				}
 				else {
@@ -22323,11 +22377,75 @@ module.exports = {
 					hp: this.maxHp,
 					avatar2: this.name2 == to
 				});
+
+				this.$reinit(from, to, maxHp, online);
 				this.update();
+			}
+			$reinit(from, to, maxHp, online) {
+				var smooth = true;
+				if (maxHp == 'nosmooth') {
+					smooth = false;
+					maxHp = null;
+				}
+				if (this.name2 == to) {
+					if (smooth) this.smoothAvatar(true);
+					this.node.avatar2.setBackground(to, 'character');
+					this.node.name2.innerHTML = get.slimName(to);
+				}
+				else if (this.name == to || this.name1 == to) {
+					if (smooth) this.smoothAvatar(false);
+					this.node.avatar.setBackground(to, 'character');
+					this.node.name.innerHTML = get.slimName(to);
+
+					if (this == game.me && ui.fakeme) {
+						ui.fakeme.style.backgroundImage = this.node.avatar.style.backgroundImage;
+					}
+				}
 			}
 			uninit() {
 				this.expandedSlots = {};
 				this.disabledSlots = {};
+
+				delete this.name;
+				delete this.name1;
+				delete this.sex;
+				delete this.group;
+				delete this.hp;
+				delete this.maxHp;
+				delete this.hujia;
+				this.clearSkills(true);
+
+				if (this.name2) {
+					delete this.singleHp;
+					delete this.name2;
+				}
+				for (var mark in this.marks) {
+					this.marks[mark].remove();
+				}
+				ui.updatem(this);
+
+				this.skipList = [];
+				this.skills = this.skills.filter(skill => {
+					return lib.skill[skill] && lib.skill[skill].superCharlotte;
+				});
+				this.initedSkills = [];
+				this.additionalSkills = {};
+				this.disabledSkills = {};
+				this.hiddenSkills = [];
+				this.awakenedSkills = [];
+				this.forbiddenSkills = {};
+				this.phaseNumber = 0;
+				this.stat = [{ card: {}, skill: {} }];
+				this.tempSkills = {};
+				this.storage = {};
+				this.marks = {};
+				this.ai = { friend: [], enemy: [], neutral: [] };
+
+				this.$uninit();
+
+				return this;
+			}
+			$uninit() {
 				this.$syncDisable();
 				if (this.isDisabledJudge()) {
 					game.broadcastAll(function (player) {
@@ -22349,51 +22467,25 @@ module.exports = {
 					this.node.name_seat.remove();
 					delete this.node.name_seat;
 				}
-				if (this.storage.nohp) this.node.hp.show();
+				this.node.hp.show();
 				this.classList.remove('unseen');
 				this.classList.remove('unseen2');
-				delete this.name;
-				delete this.name1;
-				delete this.sex;
-				delete this.group;
-				delete this.hp;
-				delete this.maxHp;
-				delete this.hujia;
-				this.clearSkills(true);
+
 				this.node.identity.style.backgroundColor = '';
 				this.node.intro.innerHTML = '';
 				this.node.name.innerHTML = '';
 				this.node.hp.innerHTML = '';
 				this.node.count.innerHTML = '0';
-				if (this.name2) {
-					delete this.singleHp;
-					this.node.avatar2.hide();
-					this.node.name2.innerHTML = '';
-					this.classList.remove('fullskin2')
-					delete this.name2;
-					this.node.count.classList.remove('p2');
-				}
+
+				this.node.avatar2.hide();
+				this.node.name2.innerHTML = '';
+				this.classList.remove('fullskin2');
+				this.node.count.classList.remove('p2');
+
 				for (var mark in this.marks) {
 					this.marks[mark].remove();
 				}
 				ui.updatem(this);
-
-				this.skipList = [];
-				this.skills = this.skills.contains('cangji_yozuru') ? ['cangji_yozuru'] : [];
-				this.initedSkills = [];
-				this.additionalSkills = {};
-				this.disabledSkills = {};
-				this.hiddenSkills = [];
-				this.awakenedSkills = [];
-				this.forbiddenSkills = {};
-				this.phaseNumber = 0;
-				this.stat = [{ card: {}, skill: {} }];
-				this.tempSkills = {};
-				this.storage = {};
-				this.marks = {};
-				this.ai = { friend: [], enemy: [], neutral: [] };
-
-				return this;
 			}
 			getLeft() {
 				return this.offsetLeft;
@@ -28200,8 +28292,13 @@ module.exports = {
 				let cards, selected = get.copy(ui.selected.cards);
 				if (get.itemtype(ignore) === 'cards') selected.addArray(ignore);
 				else if (get.itemtype(ignore) === 'card') selected.add(ignore);
-				if (this === viewer || get.itemtype(viewer) === 'player' && viewer.hasSkillTag('viewHandcard', null, this, true)) cards = this.getCards('h');
-				else cards = this.getShownCards();
+				/*if(this===viewer||get.itemtype(viewer)==='player'&&viewer.hasSkillTag('viewHandcard',null,this,true)) cards=this.getCards('h');
+				else cards=this.getShownCards();*/
+				if (this === viewer || get.itemtype(viewer) == 'player') {
+					cards = this.getKnownCards(viewer);
+				} else {
+					cards = this.getShownCards();
+				}
 				if (cards.some(card => {
 					if (selected.includes(card)) return false;
 					let name = get.name(card, this);
@@ -28222,8 +28319,13 @@ module.exports = {
 				let cards, selected = get.copy(ui.selected.cards);
 				if (get.itemtype(ignore) === 'cards') selected.addArray(ignore);
 				else if (get.itemtype(ignore) === 'card') selected.add(ignore);
-				if (this === viewer || get.itemtype(viewer) === 'player' && viewer.hasSkillTag('viewHandcard', null, this, true)) cards = this.getCards('h');
-				else cards = this.getShownCards();
+				/*if(this===viewer||get.itemtype(viewer)==='player'&&viewer.hasSkillTag('viewHandcard',null,this,true)) cards=this.getCards('h');
+				else cards=this.getShownCards();*/
+				if (this === viewer || get.itemtype(viewer) == 'player') {
+					cards = this.getKnownCards(viewer);
+				} else {
+					cards = this.getShownCards();
+				}
 				if (cards.some(card => {
 					if (selected.includes(card)) return false;
 					let name = get.name(card, this);
@@ -29830,6 +29932,37 @@ module.exports = {
 			buildIntro(noclick) {
 				if (!noclick) lib.setIntro(this);
 			}
+			//执行销毁一张牌的钩子函数
+			selfDestroy(event) {
+				if (this._selfDestroyed) return;
+				this._selfDestroyed = true;
+				this.fix();
+				this.delete();
+				const info = get.info(this, false);
+				if (!info) return;
+				if (info.destroyLog !== false) game.log(this, '被销毁了');
+				if (info.onDestroy) info.onDestroy(this, event);
+			}
+			//判断一张牌进入某个区域后是否会被销毁
+			willBeDestroyed(targetPosition, player, event) {
+				const destroyed = this.destroyed;
+				if (typeof destroyed == 'function') {
+					return destroyed(this, targetPosition, player, event);
+				}
+				else if (lib.skill[destroyed]) {
+					if (player) {
+						if (player.hasSkill(destroyed)) {
+							delete this.destroyed;
+							return false;
+						}
+					}
+					return true;
+				}
+				else if (typeof destroyed == 'string') {
+					return (destroyed == targetPosition);
+				}
+				return destroyed;
+			}
 			hasNature(nature, player) {
 				return game.hasNature(this, nature, player);
 			}
@@ -29927,14 +30060,6 @@ module.exports = {
 						card[2] = 'sha';
 						card[3] = 'thunder';
 					}
-					// else if(card[2]=='kamisha'){
-					// 	card[2]='sha';
-					// 	card[3]='kami';
-					// }
-					// else if(card[2]=='icesha'){
-					// 	card[2]='sha';
-					// 	card[3]='ice';
-					// }
 					else if (card[2] == 'cisha') {
 						card[2] = 'sha';
 						card[3] = 'stab';
@@ -29960,9 +30085,7 @@ module.exports = {
 				}
 				var cardnum = card[1] || '';
 				if (parseInt(cardnum) == cardnum) cardnum = parseInt(cardnum);
-				if (cardnum > 0 && cardnum < 14) {
-					cardnum = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'][cardnum - 1];
-				}
+
 				if (!lib.card[card[2]]) {
 					lib.card[card[2]] = {};
 				}
@@ -29977,6 +30100,43 @@ module.exports = {
 						game.addGlobalSkill(info.global);
 					}
 					delete info.global;
+				}
+				this.suit = card[0];
+				this.number = parseInt(card[1]) || 0;
+				this.name = card[2];
+
+				if (info.destroy && (typeof info.destroy != 'boolean' && !lib.skill[info.destroy])) {
+					this.destroyed = info.destroy;
+				}
+
+				if (_status.connectMode && !game.online && lib.cardOL && !this.cardid) {
+					this.cardid = get.id();
+					lib.cardOL[this.cardid] = this;
+				}
+				if (!_status.connectMode && !_status.video) {
+					this.cardid = get.id();
+				}
+
+				this.$init(card);
+
+				if (this.inits) {
+					for (var i = 0; i < this.inits.length; i++) {
+						this.inits[i](this);
+					}
+				}
+				if (typeof info.init == 'function') info.init();
+
+				return this;
+			}
+			/**
+			 * @param {[string, number, string, string]} card
+			*/
+			$init(card) {
+				var info = lib.card[card[2]];
+				var cardnum = card[1] || '';
+				if (parseInt(cardnum) == cardnum) cardnum = parseInt(cardnum);
+				if (cardnum > 0 && cardnum < 14) {
+					cardnum = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'][cardnum - 1];
 				}
 				if (this.name) {
 					this.classList.remove('epic');
@@ -30216,9 +30376,6 @@ module.exports = {
 					}
 				}
 				this.node.name2.innerHTML = get.translation(card[0]) + cardnum + ' ' + name;
-				this.suit = card[0];
-				this.number = parseInt(card[1]) || 0;
-				this.name = card[2];
 				this.classList.add('card');
 				if (card[3]) {
 					let natures = get.natureList(card[3]);
@@ -30230,12 +30387,6 @@ module.exports = {
 					delete this.nature;
 				}
 				if (info.subtype) this.classList.add(info.subtype);
-				if (this.inits) {
-					for (var i = 0; i < this.inits.length; i++) {
-						this.inits[i](this);
-					}
-				}
-				if (typeof info.init == 'function') info.init();
 				this.node.range.innerHTML = '';
 				switch (get.subtype(this, false)) {
 					case 'equip1':
@@ -30263,13 +30414,6 @@ module.exports = {
 							this.node.name2.innerHTML += '-';
 						}
 						break;
-				}
-				if (_status.connectMode && !game.online && lib.cardOL && !this.cardid) {
-					this.cardid = get.id();
-					lib.cardOL[this.cardid] = this;
-				}
-				if (!_status.connectMode && !_status.video) {
-					this.cardid = get.id();
 				}
 				var tags = [];
 				if (Array.isArray(card[4])) {
@@ -30325,6 +30469,56 @@ module.exports = {
 			}
 			aiexclude() {
 				_status.event._aiexclude.add(this);
+			}
+			//为此牌添加知情者。参数可为数组，若参数为字符串'everyone'，则所有玩家均为知情者。
+			addKnower(player) {
+				if (!this._knowers) {
+					this._knowers = [];
+				}
+				if (typeof player == 'string') {
+					this._knowers.add(player);
+				} else {
+					let type = get.itemtype(player);
+					if (type == 'player') {
+						this._knowers.add(player.playerid);
+					} else if (type == 'players') {
+						player.forEach(p => this._knowers.add(p.playerid));
+					}
+				}
+			}
+			removeKnower(player) {
+				if (!this._knowers) {
+					return;
+				}
+				if (typeof player == 'string') {
+					this._knowers.remove(player);
+				} else {
+					let type = get.itemtype(player);
+					if (type == 'player') {
+						this._knowers.remove(player.playerid);
+					} else if (type == 'players') {
+						player.forEach(p => this._knowers.remove(p.playerid));
+					}
+				}
+			}
+			//清除此牌的知情者。
+			clearKnowers() {
+				if (this._knowers) delete this._knowers;
+			}
+			//判断玩家对此牌是否知情。
+			isKnownBy(player) {
+				if (['e', 'j'].includes(get.position(this))) return true;//装备区或者判定区的牌，必知情。
+				let owner = get.owner(this);
+				if (owner) {
+					if (owner == player) return true;//是牌主，必知情。
+					if (player.hasSkillTag('viewHandcard', null, owner, true)) return true;//有viewHandcard标签，必知情。
+					if (owner.isUnderControl(true, player)) return true;//被操控，必知情。
+				}
+				if (get.is.shownCard(this)) return true;//此牌是明置牌，必知情。
+				if (this._knowers) {
+					return this._knowers.includes('everyone') || this._knowers.includes(player.playerid);
+				}
+				return false;
 			}
 			getSource(name) {
 				if (this.name == name) return true;
@@ -30431,10 +30625,10 @@ module.exports = {
 				if (this._uncheck.length == 0) this.classList.remove('uncheck');
 			}
 			discard(bool) {
-				if (!this.destroyed) {
+				if (!this._selfDestroyed) {
+					this.fix();
 					ui.discardPile.appendChild(this);
 				}
-				this.fix();
 				this.classList.remove('glow');
 				if (bool === false) {
 					ui.cardPile.insertBefore(this, ui.cardPile.childNodes[Math.floor(Math.random() * ui.cardPile.childNodes.length)]);
@@ -30679,17 +30873,17 @@ module.exports = {
 				return this;
 			}
 			/**
-			 * @param {Parameters<typeof this.hasHandler>[0]} [type]
-			 * @param {GameEvent} [event]
+			 * @param {Parameters<typeof this.hasHandler>[0]} type
+			 * @param {GameEvent} event
+			 * @param {{
+			 * state?: 'begin' | 'end';
+			 * }} option
 			 * @returns {this}
 			 */
-			callHandler(type, event) {
-				if (this.hasHandler(type)) {
-					if (!event) event = this;
-					this.getHandler(type).forEach(handler => {
-						if (typeof handler == 'function') handler(event);
-					});
-				}
+			callHandler(type, event, option) {
+				if (this.hasHandler(type)) this.getHandler(type).forEach(handler => {
+					if (typeof handler == 'function') handler(event, option);
+				});
 				return this;
 			}
 			getDefaultHandlerType() {
@@ -30698,7 +30892,9 @@ module.exports = {
 			}
 			/**
 			 * @param {Parameters<typeof this.hasHandler>[0]} [type]
-			 * @returns {((event: GameEvent) => void)[]}
+			 * @returns {((event: GameEvent, option: {
+			 * state?: 'begin' | 'end';
+			 * }) => void)[]}
 			 */
 			getHandler(type) {
 				if (!type) type = this.getDefaultHandlerType();
@@ -30716,13 +30912,17 @@ module.exports = {
 			}
 			/**
 			 * @overload
-			 * @param {...((event: GameEvent) => void)[]} handlers
+			 * @param {...((event: GameEvent, option: {
+			 * state?: 'begin' | 'end';
+			 * }) => void)[]} handlers
 			 * @returns {number}
 			 */
 			/**
 			 * @overload
 			 * @param {Parameters<typeof this.hasHandler>[0]} type
-			 * @param {...((event: GameEvent) => void)[]} handlers
+			 * @param {...((event: GameEvent, option: {
+			 * state?: 'begin' | 'end';
+			 * }) => void)[]} handlers
 			 * @returns {number}
 			 */
 			pushHandler(type) {
@@ -32800,8 +33000,8 @@ module.exports = {
 				player.changeFury(-stratagemBuff.cost.get(cardName), true);
 				const gameEvent = get.event(), effect = stratagemBuff.effect.get(cardName);
 				if (typeof effect == 'function') gameEvent.pushHandler('onNextUseCard', effect);
-				gameEvent.pushHandler('onNextUseCard', event => {
-					if (event.step == 1) game.broadcastAll(cards => cards.forEach(card => card.clone.classList.add('stratagem-fury-glow')), event.cards);
+				gameEvent.pushHandler('onNextUseCard', (event, option) => {
+					if (event.step == 0 && option.state == 'end') game.broadcastAll(cards => cards.forEach(card => card.clone.classList.add('stratagem-fury-glow')), event.cards);
 				});
 			},
 			ai: {
@@ -32854,7 +33054,7 @@ module.exports = {
 						const num = storage[key];
 						if (typeof num == 'number' && num > 0) {
 							let trans = get.translation(key);
-							if (combined && key == 'equip3') trans = '坐骑栏';
+							if (combined && key == 'equip3') trans = '坐骑';
 							str += '<li>' + trans + '栏：' + num + '个<br>'
 						}
 					}
@@ -34564,39 +34764,6 @@ module.exports = {
 							ui.rooms.push(player);
 						}
 					}
-					if (!_status.requestReadClipboard && get.config('read_clipboard', 'connect')) {
-						//每次启动只请求一次
-						_status.requestReadClipboard = true;
-						function read(text) {
-							try {
-								var roomId = text.split('\n')[1].match(/\d+/);
-								var caption = ui.rooms.find(caption => caption.key == roomId);
-								if (caption && (_status.read_clipboard_text || confirm(`是否通过复制的内容加入${roomId}房间？`))) {
-									ui.click.connectroom.call(caption);
-									delete _status.read_clipboard_text;
-								}
-							} catch (e) { console.log(e) }
-						}
-						if (_status.read_clipboard_text) {
-							read(_status.read_clipboard_text);
-						} else {
-							window.focus();
-							if (navigator.clipboard && lib.node) {
-								navigator.clipboard.readText().then(read).catch(_ => { });
-							} else {
-								var input = ui.create.node('textarea', ui.window, { opacity: '0' });
-								input.select();
-								var result = document.execCommand('paste');
-								input.blur();
-								ui.window.removeChild(input);
-								if (result || input.value.length > 0) read(input.value);
-								else if (confirm('是否输入邀请链接以加入房间？')) {
-									var text = prompt('请输入邀请链接');
-									if (typeof text == 'string' && text.length > 0) read(text);
-								}
-							}
-						}
-					}
 				}
 				lib.message.client.updateclients(clients, true);
 			},
@@ -35113,10 +35280,6 @@ module.exports = {
 					ui.connectStartBar.delete();
 					delete ui.connectStartBar;
 				}
-				if (ui.connectShareButton) {
-					ui.connectShareButton.delete();
-					delete ui.connectShareButton;
-				}
 				if (ui.roomInfo) {
 					ui.roomInfo.remove();
 					delete ui.roomInfo;
@@ -35480,6 +35643,10 @@ module.exports = {
 			 * @returns {string}
 			 */
 			getSpan: () => `${get.prefixSpan('战役篇')}${get.prefixSpan('神')}`
+		}],
+		['星', {
+			color: '#ffd700',
+			nature: 'glodenmm',
 		}]
 	]),
 	groupnature: {

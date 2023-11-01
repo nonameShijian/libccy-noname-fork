@@ -129,6 +129,7 @@ module.exports = {
 		chooseTarget: function (check) {
 			var event = _status.event;
 			if (event.filterTarget == undefined) return (check() > 0);
+			// test error
 			window.aaa();
 			var i, j, range, targets, targets2, effect;
 			var ok = false, forced = event.forced;

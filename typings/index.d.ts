@@ -5,10 +5,6 @@ declare var get = await import('../game/module/get.js');
 declare var lib = await import('../game/module/lib.js');
 declare var ui = await import('../game/module/ui.js');
 
-// declare interface Module extends NodeModule {
-// 	new(id: string);
-// }
-
 type modules = { [key: string]: NodeModule };
 
 declare global {
@@ -21,7 +17,6 @@ declare global {
 }
 
 declare interface Window {
-	//Module: Module;
 	modules: modules;
 }
 
