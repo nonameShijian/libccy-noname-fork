@@ -1,4 +1,5 @@
 {
+  "main": "main.js",
   "dependencies": {
     "@types/node": "^20.8.9"
   }

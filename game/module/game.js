@@ -9,6 +9,8 @@ const gnc = require('./gnc.js'),
 const GeneratorFunction = (function* () { }).constructor;
 const userAgent = navigator.userAgent.toLowerCase();
 
+// console.log(window?.aaa?.());
+
 module.exports = {
 	//Stratagem
 	//谋攻

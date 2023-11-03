@@ -43,6 +43,8 @@
 
 	window['b' + 'ann' + 'e' + 'dE' + 'x' + 'ten' + 's' + 'i' + 'o' + 'ns'] = ['\u4fa0\u4e49', '\u5168\u6559\u7a0b'];
 
+	// if (!Symbol.toStringTag) Symbol.toStringTag = Symbol('Symbol.toStringTag');
+
 	Error.prepareStackTrace = function (error, callSites) {
 		//console.log(error);
 		//console.log(callSites);
@@ -53,7 +55,8 @@
 			const TypeName = callSite.getTypeName();
 			const FunctionName = callSite.getFunctionName();
 			const MethodName = callSite.getMethodName();
-			//console.log(TypeName, FunctionName, MethodName);
+			console.log(TypeName, FunctionName, MethodName);
+			console.log(callSite);
 			let FileName = callSite.getFileName();
 			if (FunctionName) {
 				if (callSite.isConstructor && callSite.isConstructor()) str += 'new ';
@@ -116,8 +119,6 @@
 		return log;
 	}
 
-	// Error.stackTraceLimit = 100;
-
 	/**
 	 * 对带协议的路径进行兼容
 	 * @todo file协议的话有个初始/会导致解析错误
@@ -179,9 +180,9 @@
 			 */
 			this.id = id;
 			let exports = Object.create(null);
-			// let exports = {};
 			if (Symbol.toStringTag && id.startsWith('./')) {
 				const fileName = id.split(/[/\\]/).pop();
+				console.log(fileName.slice(0, fileName.indexOf('.')));
 				// 一般情况下无同名文件的解决办法
 				// @ts-ignore
 				exports[Symbol.toStringTag] = fileName.slice(0, fileName.indexOf('.'));
@@ -247,8 +248,6 @@
 		}
 	}
 
-
-
 	// @ts-ignore
 	// window.Module = Module;
 
@@ -261,6 +260,7 @@
 		const winRequire = window.require;
 
 		const require = function (/** @type {string} */ id) {
+			const nonameInitialized = localStorage.getItem('noname_inited');
 			// console.log(id);
 			if (modules[id]) {
 				return modules[id].exports;
@@ -300,6 +300,7 @@
 				const _module = new Module(id);
 				_module.data = data;
 				if (id.endsWith('.js')) {
+					/** @type { Function } */
 					let fun;
 					//const functionHeader = `"use strict";\n{\nlet module = window.modules['${id}'];\nlet exports = module.exports;\nlet require = module.require;\nlet __filename = '${id.slice(id.lastIndexOf('/') + 1)}';\nlet __dirname = '${!!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/'))}';\n`;
 					//const FunctionTail = `\n}`;
@@ -307,11 +308,12 @@
 					const FunctionTail = `\n})`;
 					try {
 						let mapUrl = '';
+						let source;
+						const sourcePath = convertToAbsolutePath('noname://' + id);
 
 						if (MagicString) {
-							const source = new MagicString(data);
+							source = new MagicString(data);
 							source.prepend(functionHeader).append(FunctionTail);
-							const sourcePath = convertToAbsolutePath('noname://' + id);
 							// console.log(sourcePath);
 							// generates a v3 sourcemap
 							const map = source.generateMap({
@@ -325,11 +327,14 @@
 							mapUrl = '\n//# sourceMappingURL=' + map.toUrl();
 						}
 
+						// TODO: babel or tsc
 						const str = functionHeader + data + FunctionTail + mapUrl;
-						// console.log(str);
+
 						fun = eval(str);
+
 						fun(_module.exports, _module.require, _module, /* __filename */ `${id.split(/[/\\]/).pop()}`, /* __dirname */ `${!!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/'))}`, /* process */ window.process, /* global */ window);
 						// console.log(`模块[${id}]加载成功`);
+
 						return modules[id].exports;
 					} catch (e) {
 						delete modules[id];
@@ -337,43 +342,11 @@
 							e.stack = e.stack.replace('\n    ', str => str + `at ${(nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id}` + str);
 						}
 						console.error(`模块[${id}]加载失败`);
+						// @ts-ignore
 						console.error(fun);
 						console.log(e.toString());
 						throw e;
 					}
-					// const functionHeader = `"use strict";\n{\nlet module = window.modules['${id}'];\nlet exports = module.exports;\nlet require = module.require;\nlet __filename = '${ id.slice(id.lastIndexOf('/') + 1) }';\nlet __dirname = '${ !!winRequire ? window.__dirname : nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.host.slice(0, location.host.lastIndexOf('/') == -1 ? undefined : location.host.lastIndexOf('/')) }';\n`;
-					// const FunctionTail = `\n}`;
-					// try {
-
-					// 	let mapUrl = '';
-
-					// 	if (MagicString) {
-					// 		const source = new MagicString(data);
-					// 		source.prepend(functionHeader).append(FunctionTail);
-					// 		// generates a v3 sourcemap
-					// 		const map = source.generateMap({
-					// 			// hires: true,
-					// 			source: id,
-					// 			file: id + '.map',
-					// 			includeContent: true
-					// 		});
-					// 		mapUrl = '\n//# sourceMappingURL=' + map.toUrl();
-					// 	}
-					// 	// 同步
-					// 	let script = document.createElement('script');
-					// 	let str = functionHeader + data + FunctionTail + mapUrl;
-					// 	script.innerHTML = str;
-					// 	document.head.appendChild(script);
-					// 	script.setAttribute('src', id);
-					// 	return modules[id].exports;
-					// } catch (error) {
-					// 	delete modules[id];
-					// 	if (error instanceof Error && error.stack) {
-					// 		error.stack = error.stack.replace('\n    ', str => str + `at ${(nonameInitialized && nonameInitialized != 'nodejs' ? nonameInitialized : location.href.slice(0, location.href.lastIndexOf('/') + 1)) + id}` + str);
-					// 	}
-					// 	console.error(`模块[${id}]加载失败`);
-					// 	throw error;
-					// }
 				} else {
 					try {
 						_module.load();
@@ -453,10 +426,6 @@
 	Object.keys(vCardPrototype).forEach(key => {
 		Object.defineProperty(cardPrototype, key, Object.getOwnPropertyDescriptor(vCardPrototype, key));
 	});
-	// const cardPrototype = setAllPropertiesEnumerable(lib.element.Card.prototype), vCardPrototype = setAllPropertiesEnumerable(lib.element.VCard.prototype);
-	// Object.keys(vCardPrototype).forEach(key => {
-	// 	Object.defineProperty(cardPrototype, key, Object.getOwnPropertyDescriptor(vCardPrototype, key));
-	// });
 	setAllPropertiesEnumerable(lib.element.Button.prototype);
 	setAllPropertiesEnumerable(lib.element.GameEvent.prototype);
 	setAllPropertiesEnumerable(lib.element.Dialog.prototype);
