@@ -2211,7 +2211,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				frequent:true,
 				preHidden:true,
 				async content(event,trigger,player){
-					await player.draw();
+					player.draw();
 				},
 			},
 			xinbiyue:{
