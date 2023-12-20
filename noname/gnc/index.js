@@ -10,7 +10,7 @@ class Is extends Uninstantable {
 	static generator(item) {
 		return (typeof item == "object") && ("constructor" in item) && item.constructor && ("constructor" in item.constructor) && item.constructor.constructor === GeneratorFunction;
 	}
-};
+}
 
 // gnc: GeNCoroutine
 export class GNC extends Uninstantable {
@@ -48,6 +48,6 @@ export class GNC extends Uninstantable {
 		} : (() => { throw new TypeError("gnc.of needs a GeneratorFunction.") })()
 	}
 	static is = Is;
-};
+}
 
 export const gnc = GNC;

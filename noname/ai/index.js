@@ -188,6 +188,6 @@ export class Basic extends Uninstantable {
 export class AI extends Uninstantable {
 	static basic = Basic;
 	static get = get;
-};
+}
 
 export const ai = AI;

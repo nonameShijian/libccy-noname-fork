@@ -85,8 +85,8 @@ export class Is extends Uninstantable {
 	}
 	/**
 	 * 判断传入的参数的属性是否不同（参数可以为卡牌、卡牌信息、属性等）
-	 * @param ...infos 要判断的属性列表 
-	 * @param every {boolean} 是否判断每一个传入的属性是否完全不同而不是存在部分不同
+	 * @param {...} infos 要判断的属性列表 
+	 * @param {boolean} every 是否判断每一个传入的属性是否完全不同而不是存在部分不同
 	 */
 	static differentNature() {
 		let processedArguments = [], every = false;
@@ -2554,7 +2554,7 @@ export class Get extends Uninstantable {
 		var result = function () {
 			if (filter == arguments[i]) return true;
 			for (var j in filter) {
-				if (Object.prototype.hasOwnProperty.call(filter, j)) {
+				if (Object.hasOwn(filter, j)) {
 					if (get.itemtype(arguments[i]) == 'card') {
 						if (j == 'name') {
 							if (Array.isArray(filter[j])) {
@@ -3827,8 +3827,7 @@ export class Get extends Uninstantable {
 				ui.create.div('.placeholder.slim', uiintro.content);
 			}
 			else {
-				var infoitem = get.character(character);
-				var skills = infoitem[3]; get.character(character, 3).forEach(skill => {
+				get.character(character, 3).forEach(skill => {
 					if (!lib.translate[skill + '_info']) return;
 					if (lib.translate[skill + '_ab']) translation = lib.translate[skill + '_ab'];
 					else {

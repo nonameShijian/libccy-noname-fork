@@ -1935,7 +1935,7 @@ div:not(.handcards)>.card>.info>span,
 	padding: 0;
 }
 
-div:has(>div.skill):only-child {
+.caption>div:has(>div.skill) {
 	display: flex;
 	flex-wrap: nowrap;
 }

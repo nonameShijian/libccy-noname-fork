@@ -1523,7 +1523,7 @@ export class Game extends Uninstantable {
 	* info.audioname=['player1','player2']
 	* //audioname里可以放任意角色名。
 	* //如果其中包含发动技能的角色名"player"，且info.audio不是直接路径"(anyPath/)filename(.format)"的形式
-	* //则在"skill"和number中插入"_player"，形如
+	* //则在"skill"和number中插入"_player"，形如"paoxiao_xiahouba1"
 	* 
 	* info.audioname2={'player1':audioInfo1,'player2':audioInfo2}
 	* //audioname2是一个对象，其中key为角色名，value的类型和info.audio一样
@@ -8079,6 +8079,6 @@ export class Game extends Uninstantable {
 			return true;
 		});
 	}
-};
+}
 
 export const game = Game;
