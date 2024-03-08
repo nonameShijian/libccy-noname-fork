@@ -76,13 +76,8 @@ export class RefImpl {
 			get(target, prop) {
 				let value = Reflect.get(target, prop);
 				// 不代理构造函数
-				if (prop != 'constructor') {
-					if (typeof value == 'function') {
-						value = value.bind(target);
-					}
-					if (Object(value) === value && Boolean(value)) {
-						return new Proxy(value, handler);
-					}
+				if (prop !== 'constructor' && Object(value) === value && Boolean(value)) {
+					return new Proxy(value, handler);
 				}
 				return value;
 			},
@@ -116,7 +111,6 @@ export class RefImpl {
 				// 有相同监听的属性，就不继续监听了
 				return !bound.props.find(({ key: key2 }) => key == key2);
 			}));
-			
 		}
 		if (!Array.isArray(bound.attrs)) bound.attrs = [];
 		if (Array.isArray(attrs)) {
@@ -225,7 +219,7 @@ export function compiler(el, evaluateJavascript) {
 		const parentKey = `instructions-m-if-parent:m-if`;
 		const siblingKey = `instructions-m-if-sibling:m-if`;
 		const unionKey = `instructions-m-if-union:m-if`;
-		function updateParentKey(el) {
+		const updateParentKey = function (el) {
 			if (el['instructions:m-if']) {
 				el[parentKey] = el.parentElement;
 				el[siblingKey] = Array.from(el.parentElement.childNodes);
@@ -251,7 +245,7 @@ export function compiler(el, evaluateJavascript) {
 						firstIfElement[siblingKey].splice(index, 0, firstIfElement);
 					}
 				}
-			} 
+			}
 			else if (el['instructions-m-for-source:m-for']) {
 				const sourceElement = el['instructions-m-for-source:m-for'];
 				sourceElement[`instructions-m-for-parent:m-for`] = el.parentElement;
@@ -410,7 +404,7 @@ export function compiler(el, evaluateJavascript) {
 			[...el.children].forEach(ele => compiler(ele, evaluateJavascript));
 		}
 	}
-};
+}
 
 /**
  * 指令类
@@ -707,28 +701,7 @@ export class Instructions {
 				const parentKey = `instructions-${instructions}-parent:${instructions}`;
 				// 其所渲染的所有元素
 				const childKey = `instructions-${instructions}-childKey:${instructions}`;
-				// 初始处理
-				if (el.hasAttribute(instructions)) {
-					if (!el[childKey]) el[childKey] = [];
-					execution(el);
-				}
-				// 从保存的数据处理
-				else {
-					// 移除已经渲染的元素
-					el[childKey].forEach(ele => {
-						if (ele.parentNode) ele.parentNode.removeChild(ele);
-					});
-					let doc = document.implementation.createHTMLDocument('');
-					doc.body.innerHTML = el[instructionsKey];
-					const resolvingElement = doc.body.firstChild;
-					if (!resolvingElement[childKey]) resolvingElement[childKey] = [];
-					if (el[parentKey]) resolvingElement[parentKey] = el[parentKey];
-					if (el[siblingKey]) resolvingElement[siblingKey] = el[siblingKey];
-					resolvingElement[sourceKey] = el;
-					execution(resolvingElement, false);
-				}
-				
-				function execution(el, record = true) {
+				const execution = function (el, record = true) {
 					if (el.hasAttribute(instructions)) {
 						// 储存其本身的outerHTML，数据变动后重新解析
 						// 因为解析后，其的其他标签属性会丢失
@@ -954,6 +927,27 @@ export class Instructions {
 						} else if (el.parentNode) el.parentNode.replaceChild(fragment, el);
 					}
 				}
+				// 初始处理
+				if (el.hasAttribute(instructions)) {
+					if (!el[childKey]) el[childKey] = [];
+					execution(el);
+				}
+				// 从保存的数据处理
+				else {
+					// 移除已经渲染的元素
+					el[childKey].forEach(ele => {
+						if (ele.parentNode) ele.parentNode.removeChild(ele);
+					});
+					let doc = document.implementation.createHTMLDocument('');
+					doc.body.innerHTML = el[instructionsKey];
+					const resolvingElement = doc.body.firstChild;
+					if (!resolvingElement[childKey]) resolvingElement[childKey] = [];
+					if (el[parentKey]) resolvingElement[parentKey] = el[parentKey];
+					if (el[siblingKey]) resolvingElement[siblingKey] = el[siblingKey];
+					resolvingElement[sourceKey] = el;
+					execution(resolvingElement, false);
+				}
+
 				break;
 			}
 			default:
