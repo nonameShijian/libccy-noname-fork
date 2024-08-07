@@ -13148,7 +13148,7 @@ export class Library {
 					}
 					ui.updatehl();
 					ui.create.connecting(true);
-				}).catch(_ => {});;
+				}).catch(_ => {});
 			},
 			exec: function (func) {
 				const key = game.onlineKey;
