@@ -4716,7 +4716,7 @@ export class Library {
 									}
 								}
 								localStorage.setItem("boss_storage_playpackconfig", JSON.stringify(storage));
-							});
+							}).catch(_ => {});
 						};
 						game.loadModeAsync("boss", function (mode) {
 							for (var i in mode.translate) {
@@ -4728,7 +4728,7 @@ export class Library {
 								}
 							}
 							loadversus();
-						});
+						}).catch(_ => {});;
 					} else {
 						localStorage.removeItem("boss_storage_playpackconfig");
 					}
@@ -12849,7 +12849,7 @@ export class Library {
 						game.loop();
 						game.send("inited");
 						ui.create.connecting(true);
-					});
+					}).catch(_ => {});
 				};
 				if (_status.event.parent) {
 					game.forceOver("noover", proceed);
@@ -13148,7 +13148,7 @@ export class Library {
 					}
 					ui.updatehl();
 					ui.create.connecting(true);
-				});
+				}).catch(_ => {});;
 			},
 			exec: function (func) {
 				const key = game.onlineKey;
