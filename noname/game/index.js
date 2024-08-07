@@ -6315,7 +6315,7 @@ export class Game extends GameCompatible {
 					game.loop();
 				});
 			}
-		});
+		}).catch(_ => {});
 	}
 	/**
 	 * @param { string } mode
