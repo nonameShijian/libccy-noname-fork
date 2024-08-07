@@ -6146,7 +6146,7 @@ export class Game extends GameCompatible {
 			return content;
 		}).catch((e) => {
 			console.error(`导入的模式[${name}]不存在！`);
-			return e;
+			throw e;
 		});
 	}
 	/**
