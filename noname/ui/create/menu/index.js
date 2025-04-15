@@ -1,4 +1,6 @@
 import { ui, game, get, lib, _status } from "../../../../noname.js";
+import { createApp } from "../../../../game/vue.esm-browser.js";
+import Menu from "./views/menu.vue";
 
 export function openMenu(node, e, onclose) {
 	popupContainer.innerHTML = "";
@@ -529,4 +531,40 @@ export function menu(connectMenu) {
 		delete window.resetExtension;
 		localStorage.removeItem(lib.configprefix + "disable_extension", true);
 	}
+}
+
+/**
+ * @param { boolean } [connectMenu]
+ */
+export function newMenu(connectMenu) {
+	const cacheMenuContainer = (menuContainer = ui.create.div(".menu-container.hidden", ui.window, () => {
+		clickContainer.call(cacheMenuContainer, connectMenu);
+	}));
+	const cachePopupContainer = (popupContainer = ui.create.div(
+		".popup-container.hidden",
+		ui.window,
+		function closeMenu() {
+			// @ts-ignore
+			if (cachePopupContainer.noclose) {
+				// @ts-ignore
+				cachePopupContainer.noclose = false;
+				return;
+			}
+			cachePopupContainer.classList.add("hidden");
+			if (typeof cachePopupContainer.onclose == "function") {
+				// @ts-ignore
+				cachePopupContainer.onclose();
+			}
+		}
+	));
+	// 使用vue的createApp来创建
+	const app = createApp(Menu, {
+		connectMenu
+	});
+
+	app.mount(cacheMenuContainer);
+	cacheMenuContainer.firstElementChild.listen(e => {
+		e.stopPropagation();
+	})
+	cacheMenuContainer.show();
 }
