@@ -1,4 +1,11 @@
 const characters = {
+	tw_zhuzhi: {
+		sex: "male",
+		group: "wu",
+		hp: 4,
+		skills: ["twanguo"],
+		dieAudios: ["xin_zhuzhi"],
+	},
 	huan_dianwei: {
 		sex: "male",
 		group: "wei",
@@ -147,7 +154,7 @@ const characters = {
 	},
 	licuilianzhaoquanding: {
 		sex: "double",
-		group: "qun",
+		group: "shu",
 		hp: 3,
 		skills: ["twciyin", "twchenglong"],
 		names: "李|翠莲-赵|全定",
@@ -265,7 +272,7 @@ const characters = {
 	xia_xiahousone: {
 		sex: "female",
 		group: "qun",
-		hp: 3,
+		hp: 4,
 		skills: ["twchengxi"],
 		names: "夏侯|子萼",
 	},
